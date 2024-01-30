@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -83,7 +82,7 @@ func issueEventSubRequest(cfg *Config, method, url string, body io.Reader) ([]by
 		return nil, err
 	}
 	if *Debug {
-		logger.Info(fmt.Sprintf("  auth[%v] client[%v]", cfg.AuthCode, cfg.ClientId))
+		logger.Info("rest auth", "Auth", cfg.AuthCode, "ClientID", cfg.ClientId)
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", cfg.AuthCode))
 	req.Header.Set("Content-Type", "application/json")
@@ -97,8 +96,7 @@ func issueEventSubRequest(cfg *Config, method, url string, body io.Reader) ([]by
 
 	byteArray, _ := io.ReadAll(resp.Body)
 	if *Debug {
-		logger.Info("request[" + url + "]")
-		logger.Info("ret[" + string(byteArray) + "]")
+		logger.Info("request", "URL", url, "RawRet", string(byteArray))
 	}
 	return byteArray, nil
 }
@@ -118,7 +116,7 @@ func connect() (*websocket.Conn, error) {
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
-		log.Fatal("dial:", err)
+		logger.Error("dial error" + err.Error())
 		return nil, err
 	}
 	return c, nil
@@ -128,15 +126,15 @@ func receive(conn *websocket.Conn) (*Responce, []byte, error) {
 	r := &Responce{}
 	_, message, err := conn.ReadMessage()
 	if err != nil {
-		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
+		logger.Error("ReadMessage " + err.Error())
 		return nil, nil, err
 	}
 	if *Debug {
-		logger.Info(fmt.Sprintln("raw data:   ", string(message)))
+		logger.Info("receive", "raw", string(message))
 	}
 	err = json.Unmarshal(message, &r)
 	if err != nil {
-		log.Fatalln(err)
+		logger.Error("json.Unmarshal", "ERR", err.Error())
 		return nil, nil, err
 	}
 	return r, message, nil
@@ -160,37 +158,39 @@ func handleSessionWelcome(cfg *Config, r *Responce, raw []byte) {
 			Transport: t,
 		}
 		bin, _ := json.Marshal(&body)
-		logger.Info(fmt.Sprintf("session ID[%v] user[%v]", r.Payload.Session.Id, cfg.TargetUser))
-		logger.Info(fmt.Sprintf("create EventSub [%v]", k))
+		logger.Info("Session Welcome", "SessionID", r.Payload.Session.Id, "User", cfg.TargetUser)
+		logger.Info("create EventSub", "Type", k)
 		_, err := issueEventSubRequest(cfg, "POST", "https://api.twitch.tv/helix/eventsub/subscriptions", bytes.NewReader(bin))
 		if err != nil {
-			logger.Info(fmt.Sprintln("ERR(Eventsub Request): ", err))
+			logger.Error("Eventsub Request" + err.Error())
 		}
 	}
 }
 
 func handleNotificationDefault(r *Responce, raw []byte) {
-	logger.Info(fmt.Sprintf(">event(no handler): [%v]", r.Payload.Subscription.Type))
+	logger.Info("event(no handler)", "Type", r.Payload.Subscription.Type)
 }
 
 func handleNotificationChannelChatMessage(r *Responce, raw []byte) {
 	v := &ResponceChatMessage{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
+		logger.Error("ReadMessage " + err.Error())
 	}
-	logger.Info(fmt.Sprintf(">event: chat msg [user:%v] [text:%v]", v.Payload.Event.ChatterUserLogin, v.Payload.Event.Message.Text))
+	e := &v.Payload.Event
+	logger.Info("event(ChatMsg)", "user", e.ChatterUserLogin, "text", e.Message.Text)
 }
 
 func handleNotificationChannelChatNotification(r *Responce, raw []byte) {
 	v := &ResponceChannelChatNotification{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
+		logger.Error("ReadMessage " + err.Error())
 	}
-	switch v.Payload.Event.NoticeType {
+	e := &v.Payload.Event
+	switch e.NoticeType {
 	case "raid":
-		logger.Info(fmt.Sprintf(">event: raid from[%v] w/ [%v] viewers", v.Payload.Event.RaId.UserName, v.Payload.Event.RaId.ViewerCount))
+		logger.Info("event(Raid)", "from", e.RaId.UserName, "viewers", e.RaId.ViewerCount)
 	case "sub":
 	case "resub":
 	case "sub_gift":
@@ -203,7 +203,7 @@ func handleNotificationChannelChatNotification(r *Responce, raw []byte) {
 	case "bits_badge_tier":
 	case "charity_donation":
 	default:
-		logger.Info(fmt.Sprintf(">event: not-parsed[%v]", string(raw)))
+		logger.Error("event(NotParsed)", "raw", string(raw))
 	}
 }
 
@@ -211,12 +211,13 @@ func handleNotificationChannelSubscribe(r *Responce, raw []byte) {
 	v := &ResponceChannelSubscribe{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
+		logger.Error("ReadMessage " + err.Error())
 	}
+	e := &v.Payload.Event
 	if v.Payload.Event.IsGift {
-		logger.Info(fmt.Sprintf(">event : Subscribed(Gift) [user:%v] [tear:%v] [gift:%v]", v.Payload.Event.UserName, v.Payload.Event.Tier, v.Payload.Event.IsGift))
+		logger.Info("event(Subscribed<Gift>)", "user", e.UserName, "tear", e.Tier, "gift", e.IsGift)
 	} else {
-		logger.Info(fmt.Sprintf(">event : Subscribed [user:%v] [tear:%v] [gift:%v]", v.Payload.Event.UserName, v.Payload.Event.Tier, v.Payload.Event.IsGift))
+		logger.Info("event(Subscribed)", "user", e.UserName, "tear", e.Tier, "gift", e.IsGift)
 	}
 }
 
@@ -224,58 +225,59 @@ func handleNotificationChannelSubscriptionMessage(r *Responce, raw []byte) {
 	v := &ResponceChannelSubscriptionMessage{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
+		logger.Error("ReadMessage " + err.Error())
 	}
-	logger.Info(fmt.Sprintf(">event: ReSubscribed [user:%v] [tear:%v] [get %v month subscription] [continous:%v month] [total:%v month]",
-		v.Payload.Event.UserName, v.Payload.Event.Tier, v.Payload.Event.DurationMonths, v.Payload.Event.StreakMonths, v.Payload.Event.CumulativeMonths))
+	e := &v.Payload.Event
+	logger.Info("event(ReSubscribed)", "user", e.UserName, "tear", e.Tier,
+		"duration", e.DurationMonths, "streak", e.StreakMonths, "cumlative", e.CumulativeMonths)
 }
 
 func handleNotificationChannelCheer(r *Responce, raw []byte) {
 	v := &ResponceChannelCheer{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
+		logger.Error("ReadMessage " + err.Error())
 	}
-	logger.Info(fmt.Sprintf(">event: Cheer [user:%v] [anonymous:%v] [bits %v] [msg:%v]",
-		v.Payload.Event.UserName, v.Payload.Event.IsAnonymous, v.Payload.Event.Bits, v.Payload.Event.Message))
+	e := &v.Payload.Event
+	logger.Info("event(Cheer)", "user", e.UserName, "anonymous", e.IsAnonymous, "bits", e.Bits, "msg", e.Message)
 }
 
 func handleNotificationStreamOnline(r *Responce, raw []byte) {
 	v := &ResponceStreamOnline{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
+		logger.Error("ReadMessage " + err.Error())
 	}
-	logger.Info(fmt.Sprintf(">event: Online [user:%v] [at:%v]",
-		v.Payload.Event.BroadcasterUserName, v.Payload.Event.StartedAt))
+	e := &v.Payload.Event
+	logger.Info("event(Online)", "user", e.BroadcasterUserName, "at", e.StartedAt)
 }
 
 func handleNotificationStreamOffline(r *Responce, raw []byte) {
 	v := &ResponceStreamOffline{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
+		logger.Error("ReadMessage " + err.Error())
 	}
-	logger.Info(fmt.Sprintf(">event: Offline [user:%v]",
-		v.Payload.Event.BroadcasterUserName))
+	e := &v.Payload.Event
+	logger.Info("event(Offline)", "user", e.BroadcasterUserName)
 }
 
 func handleNotificationChannelPointsCustomRewardRedemptionAdd(r *Responce, raw []byte) {
 	v := &ResponceChannelPointsCustomRewardRedemptionAdd{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
+		logger.Error("ReadMessage " + err.Error())
 	}
-	logger.Info(fmt.Sprintf(">event: Channel Points [user:%v] [title:%v]",
-		v.Payload.Event.BroadcasterUserName, v.Payload.Event.Reward.Title))
+	e := &v.Payload.Event
+	logger.Info("event(Channel Points)", "user", e.BroadcasterUserName, "title", e.Reward.Title)
 }
 
 func handleNotification(cfg *Config, r *Responce, raw []byte) {
-	log.Println("type ", r.Payload.Subscription.Type)
+	logger.Info("ReceiveNotification", "type", r.Payload.Subscription.Type)
 	if e, exists := SubscribeHandlerList[r.Payload.Subscription.Type]; exists {
 		e.Handler(r, raw)
 	} else {
-		logger.Info("UNKNOWN notification " + r.Payload.Subscription.Type)
+		logger.Error("UNKNOWN notification", "Type", r.Payload.Subscription.Type)
 	}
 }
 
@@ -285,29 +287,28 @@ func progress(done *chan struct{}, cfg *Config, conn *websocket.Conn) {
 		if err != nil {
 			break
 		}
-		log.Printf("recv: type[%v]", r.Metadata.MessageType)
+		logger.Info("recv", "Type", r.Metadata.MessageType)
 		switch r.Metadata.MessageType {
 		case "session_welcome":
-			log.Println("event: connected")
+			logger.Info("event: connected")
 			handleSessionWelcome(cfg, r, raw)
 		case "session_keepalive":
-			log.Println("event: keepalive")
+			logger.Info("event: keepalive")
 		case "session_reconnect":
-			log.Println("event: reconnect")
+			logger.Info("event: reconnect")
 		case "notification":
-			log.Println("event: notification")
+			logger.Info("event: notification")
 			handleNotification(cfg, r, raw)
 		case "revocation":
-			log.Println("event: revocation")
+			logger.Info("event: revocation")
 		default:
-			log.Println("event: UNKNOWN", r.Metadata.MessageType)
+			logger.Error("UNKNOWN Event", "Type", r.Metadata.MessageType)
 		}
 	}
 }
 
 func main() {
 	flag.Parse()
-	log.SetFlags(0)
 	cfg, err := loadConfig()
 	if err != nil {
 		panic(nil)
@@ -347,7 +348,7 @@ func main() {
 			// waiting (with timeout) for the server to close the connection.
 			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			if err != nil {
-				logger.Info("write close:" + err.Error())
+				logger.Error("write close " + err.Error())
 				return
 			}
 			select {
