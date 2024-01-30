@@ -60,6 +60,7 @@ var (
 type SubscriptionCondition struct {
 	BroadcasterUserId string `json:"broadcaster_user_id"`
 	UserId            string `json:"user_id"`
+	ModeratorUserId   string `json:"moderator_user_id"`
 }
 
 type SubscriptionTransport struct {
@@ -152,6 +153,7 @@ func handleSessionWelcome(cfg *Config, r *Responce, raw []byte) {
 	c := SubscriptionCondition{
 		BroadcasterUserId: cfg.TargetUser,
 		UserId:            cfg.TargetUser,
+		ModeratorUserId:   cfg.TargetUser,
 	}
 	t := SubscriptionTransport{
 		Method:    "websocket",
