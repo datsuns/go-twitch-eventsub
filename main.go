@@ -17,9 +17,11 @@ import (
 	slogmulti "github.com/samber/slog-multi"
 )
 
+type RequestBuilder func(*Config, *Responce, string, string) []byte
 type SessionHandler func(*Responce, []byte)
 type SessionHandlerEntry struct {
 	Version string
+	Builder RequestBuilder
 	Handler SessionHandler
 }
 
@@ -42,16 +44,16 @@ var (
 
 	// https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#subscription-types
 	SubscribeHandlerList = map[string]SessionHandlerEntry{
-		"channel.chat.message":         {"1", handleNotificationChannelChatMessage},         // user:read:chat
-		"channel.follow":               {"2", handleNotificationDefault},                    // moderator:read:followers
-		"channel.chat.notification":    {"1", handleNotificationChannelChatNotification},    // user:read:chat
-		"channel.subscribe":            {"1", handleNotificationChannelSubscribe},           // channel:read:subscriptions
-		"channel.subscription.gift":    {"1", handleNotificationDefault},                    // channel:read:subscriptions
-		"channel.subscription.message": {"1", handleNotificationChannelSubscriptionMessage}, // channel:read:subscriptions
-		"channel.cheer":                {"1", handleNotificationChannelCheer},               // bits:read
-		"stream.online":                {"1", handleNotificationStreamOnline},
-		"stream.offline":               {"1", handleNotificationStreamOffline},
-		"channel.channel_points_custom_reward_redemption.add": {"1", handleNotificationChannelPointsCustomRewardRedemptionAdd}, // channel:read:redemptions
+		"channel.chat.message":         {"1", buildRequest, handleNotificationChannelChatMessage},         // user:read:chat
+		"channel.follow":               {"2", buildRequestChannelFollow, handleNotificationDefault},       // moderator:read:followers
+		"channel.chat.notification":    {"1", buildRequest, handleNotificationChannelChatNotification},    // user:read:chat
+		"channel.subscribe":            {"1", buildRequest, handleNotificationChannelSubscribe},           // channel:read:subscriptions
+		"channel.subscription.gift":    {"1", buildRequest, handleNotificationDefault},                    // channel:read:subscriptions
+		"channel.subscription.message": {"1", buildRequest, handleNotificationChannelSubscriptionMessage}, // channel:read:subscriptions
+		"channel.cheer":                {"1", buildRequest, handleNotificationChannelCheer},               // bits:read
+		"stream.online":                {"1", buildRequest, handleNotificationStreamOnline},
+		"stream.offline":               {"1", buildRequest, handleNotificationStreamOffline},
+		"channel.channel_points_custom_reward_redemption.add": {"1", buildRequest, handleNotificationChannelPointsCustomRewardRedemptionAdd}, // channel:read:redemptions
 	}
 )
 
@@ -60,6 +62,11 @@ var (
 type SubscriptionCondition struct {
 	BroadcasterUserId string `json:"broadcaster_user_id"`
 	UserId            string `json:"user_id"`
+	ModeratorUserId   string `json:"moderator_user_id"`
+}
+
+type SubscriptionConditionChannelFollow struct {
+	BroadcasterUserId string `json:"broadcaster_user_id"`
 	ModeratorUserId   string `json:"moderator_user_id"`
 }
 
@@ -76,6 +83,13 @@ type CreateSubscriptionBody struct {
 	Version   string                `json:"version"`
 	Condition SubscriptionCondition `json:"condition"`
 	Transport SubscriptionTransport `json:"transport"`
+}
+
+type CreateSubscriptionBodyChannelFollow struct {
+	Type      string                             `json:"type"`
+	Version   string                             `json:"version"`
+	Condition SubscriptionConditionChannelFollow `json:"condition"`
+	Transport SubscriptionTransport              `json:"transport"`
 }
 
 func issueEventSubRequest(cfg *Config, method, url string, body io.Reader) ([]byte, error) {
@@ -148,25 +162,48 @@ func receive(conn *websocket.Conn) (*Responce, []byte, error) {
 	return r, message, nil
 }
 
-// https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#subscription-types
-func handleSessionWelcome(cfg *Config, r *Responce, raw []byte) {
+func buildRequest(cfg *Config, r *Responce, subscType, version string) []byte {
 	c := SubscriptionCondition{
 		BroadcasterUserId: cfg.TargetUser,
 		UserId:            cfg.TargetUser,
+	}
+	t := SubscriptionTransport{
+		Method:    "websocket",
+		SessionId: r.Payload.Session.Id,
+	}
+	body := CreateSubscriptionBody{
+		Type:      subscType,
+		Version:   version,
+		Condition: c,
+		Transport: t,
+	}
+	bin, _ := json.Marshal(&body)
+	return bin
+}
+
+func buildRequestChannelFollow(cfg *Config, r *Responce, subscType, version string) []byte {
+	c := SubscriptionConditionChannelFollow{
+		BroadcasterUserId: cfg.TargetUser,
 		ModeratorUserId:   cfg.TargetUser,
 	}
 	t := SubscriptionTransport{
 		Method:    "websocket",
 		SessionId: r.Payload.Session.Id,
 	}
+	body := CreateSubscriptionBodyChannelFollow{
+		Type:      subscType,
+		Version:   version,
+		Condition: c,
+		Transport: t,
+	}
+	bin, _ := json.Marshal(&body)
+	return bin
+}
+
+// https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#subscription-types
+func handleSessionWelcome(cfg *Config, r *Responce, raw []byte) {
 	for k, v := range SubscribeHandlerList {
-		body := CreateSubscriptionBody{
-			Type:      k,
-			Version:   v.Version,
-			Condition: c,
-			Transport: t,
-		}
-		bin, _ := json.Marshal(&body)
+		bin := v.Builder(cfg, r, k, v.Version)
 		logger.Info("create EventSub", "SessionID", r.Payload.Session.Id, "User", cfg.TargetUser, "Type", k, "Raw", string(bin))
 		_, err := issueEventSubRequest(cfg, "POST", "https://api.twitch.tv/helix/eventsub/subscriptions", bytes.NewReader(bin))
 		if err != nil {
