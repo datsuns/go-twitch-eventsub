@@ -94,9 +94,15 @@ func issueEventSubRequest(cfg *Config, method, url string, body io.Reader) ([]by
 	}
 	defer resp.Body.Close()
 
-	byteArray, _ := io.ReadAll(resp.Body)
+	byteArray, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 	if *Debug {
-		logger.Info("request", "URL", url, "RawRet", string(byteArray))
+		logger.Info("request", "Status", resp.Status, "URL", url, "RawRet", string(byteArray))
+	}
+	if resp.StatusCode != 202 {
+		return nil, fmt.Errorf("error responce. status[%v] msg[%v]", resp.StatusCode, string(byteArray))
 	}
 	return byteArray, nil
 }
@@ -162,7 +168,7 @@ func handleSessionWelcome(cfg *Config, r *Responce, raw []byte) {
 		logger.Info("create EventSub", "Type", k)
 		_, err := issueEventSubRequest(cfg, "POST", "https://api.twitch.tv/helix/eventsub/subscriptions", bytes.NewReader(bin))
 		if err != nil {
-			logger.Error("Eventsub Request" + err.Error())
+			logger.Error("Eventsub Request", "ERROR", err.Error())
 		}
 	}
 }
