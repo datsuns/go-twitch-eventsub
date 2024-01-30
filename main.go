@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -23,17 +24,21 @@ type SessionHandlerEntry struct {
 }
 
 const (
-	LocalTestAddr   = "127.0.0.1:8080"
-	LocalTestScheme = "ws"
+	LocalTestAddr          = "127.0.0.1:8080"
+	LocalTestScheme        = "ws"
+	DEFAULT_SUBSCRIBE_USER = "DEFAULT_SUBSCRIBE_USER"
+	MY_TWITCH_AUTH_CODE    = "MY_TWITCH_AUTH_CODE"
+	MY_TWITCH_CLIENT_ID    = "MY_TWITCH_CLIENT_ID"
 )
 
 var (
-	Debug = flag.Bool("debug", false, "debug mode")
-	Test  = flag.Bool("test", false, "local test mode")
+	logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
+	Debug  = flag.Bool("debug", false, "debug mode")
+	Test   = flag.Bool("test", false, "local test mode")
 
 	scheme = "wss"
 	addr   = flag.String("addr", "eventsub.wss.twitch.tv", "http service address")
-	user   = flag.String("user", os.Getenv("DEFAULT_SUBSCRIBE_USER"), "subscription target user")
+	user   = flag.String("user", os.Getenv(DEFAULT_SUBSCRIBE_USER), "subscription target user")
 
 	path      = "/ws"
 	query     = "keepalive_timeout_seconds=30"
@@ -77,14 +82,14 @@ type CreateSubscriptionBody struct {
 }
 
 func issueEventSubRequest(method, url string, body io.Reader) ([]byte, error) {
-	authCode := os.Getenv("MY_TWITCH_AUTH_CODE")
-	clientId := os.Getenv("MY_TWITCH_CLIENT_ID")
+	authCode := os.Getenv(MY_TWITCH_AUTH_CODE)
+	clientId := os.Getenv(MY_TWITCH_CLIENT_ID)
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return nil, err
 	}
 	if *Debug {
-		log.Printf("  auth[%v] client[%v]\n", authCode, clientId)
+		logger.Info(fmt.Sprintf("  auth[%v] client[%v]", authCode, clientId))
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authCode))
 	req.Header.Set("Content-Type", "application/json")
@@ -98,7 +103,8 @@ func issueEventSubRequest(method, url string, body io.Reader) ([]byte, error) {
 
 	byteArray, _ := io.ReadAll(resp.Body)
 	if *Debug {
-		log.Printf("request[%s]\n   ret[%s]\n", url, string(byteArray))
+		logger.Info("request[" + url + "]")
+		logger.Info("ret[" + string(byteArray) + "]")
 	}
 	return byteArray, nil
 }
@@ -114,7 +120,7 @@ func connect() (*websocket.Conn, error) {
 	} else {
 		u = url.URL{Scheme: scheme, Host: *addr, Path: path, RawQuery: buildQuery()}
 	}
-	log.Printf("connecting to %s", u.String())
+	logger.Info("connecting to " + u.String())
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
@@ -128,11 +134,11 @@ func receive(conn *websocket.Conn) (*Responce, []byte, error) {
 	r := &Responce{}
 	_, message, err := conn.ReadMessage()
 	if err != nil {
-		log.Println("ERR(ReadMessage): ", err)
+		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
 		return nil, nil, err
 	}
 	if *Debug {
-		fmt.Println("raw data:   ", string(message))
+		logger.Info(fmt.Sprintln("raw data:   ", string(message)))
 	}
 	err = json.Unmarshal(message, &r)
 	if err != nil {
@@ -144,7 +150,7 @@ func receive(conn *websocket.Conn) (*Responce, []byte, error) {
 
 // https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#subscription-types
 func handleSessionWelcome(r *Responce, raw []byte) {
-	fmt.Println("session ID is", r.Payload.Session.Id, "target user [", *user, "]")
+	logger.Info(fmt.Sprintln("session ID is", r.Payload.Session.Id, "target user [", *user, "]"))
 	c := SubscriptionCondition{
 		BroadcasterUserId: *user,
 		UserId:            *user,
@@ -161,36 +167,36 @@ func handleSessionWelcome(r *Responce, raw []byte) {
 			Transport: t,
 		}
 		bin, _ := json.Marshal(&body)
-		log.Printf("create EventSub [%v]\n", k)
+		logger.Info(fmt.Sprintf("create EventSub [%v]", k))
 		_, err := issueEventSubRequest("POST", "https://api.twitch.tv/helix/eventsub/subscriptions", bytes.NewReader(bin))
 		if err != nil {
-			log.Println("ERR(Eventsub Request): ", err)
+			logger.Info(fmt.Sprintln("ERR(Eventsub Request): ", err))
 		}
 	}
 }
 
 func handleNotificationDefault(r *Responce, raw []byte) {
-	fmt.Printf(">event(no handler): [%v]\n", r.Payload.Subscription.Type)
+	logger.Info(fmt.Sprintf(">event(no handler): [%v]", r.Payload.Subscription.Type))
 }
 
 func handleNotificationChannelChatMessage(r *Responce, raw []byte) {
 	v := &ResponceChatMessage{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		log.Println("ERR(ReadMessage): ", err)
+		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
 	}
-	fmt.Printf(">event: chat msg [user:%v] [text:%v]\n", v.Payload.Event.ChatterUserLogin, v.Payload.Event.Message.Text)
+	logger.Info(fmt.Sprintf(">event: chat msg [user:%v] [text:%v]", v.Payload.Event.ChatterUserLogin, v.Payload.Event.Message.Text))
 }
 
 func handleNotificationChannelChatNotification(r *Responce, raw []byte) {
 	v := &ResponceChannelChatNotification{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		log.Println("ERR(ReadMessage): ", err)
+		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
 	}
 	switch v.Payload.Event.NoticeType {
 	case "raid":
-		fmt.Printf(">event: raid from[%v] w/ [%v] viewers\n", v.Payload.Event.RaId.UserName, v.Payload.Event.RaId.ViewerCount)
+		logger.Info(fmt.Sprintf(">event: raid from[%v] w/ [%v] viewers", v.Payload.Event.RaId.UserName, v.Payload.Event.RaId.ViewerCount))
 	case "sub":
 	case "resub":
 	case "sub_gift":
@@ -203,7 +209,7 @@ func handleNotificationChannelChatNotification(r *Responce, raw []byte) {
 	case "bits_badge_tier":
 	case "charity_donation":
 	default:
-		fmt.Printf(">event: not-parsed[%v]\n", string(raw))
+		logger.Info(fmt.Sprintf(">event: not-parsed[%v]", string(raw)))
 	}
 }
 
@@ -211,12 +217,12 @@ func handleNotificationChannelSubscribe(r *Responce, raw []byte) {
 	v := &ResponceChannelSubscribe{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		log.Println("ERR(ReadMessage): ", err)
+		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
 	}
 	if v.Payload.Event.IsGift {
-		fmt.Printf(">event : Subscribed(Gift) [user:%v] [tear:%v] [gift:%v]\n", v.Payload.Event.UserName, v.Payload.Event.Tier, v.Payload.Event.IsGift)
+		logger.Info(fmt.Sprintf(">event : Subscribed(Gift) [user:%v] [tear:%v] [gift:%v]", v.Payload.Event.UserName, v.Payload.Event.Tier, v.Payload.Event.IsGift))
 	} else {
-		fmt.Printf(">event : Subscribed [user:%v] [tear:%v] [gift:%v]\n", v.Payload.Event.UserName, v.Payload.Event.Tier, v.Payload.Event.IsGift)
+		logger.Info(fmt.Sprintf(">event : Subscribed [user:%v] [tear:%v] [gift:%v]", v.Payload.Event.UserName, v.Payload.Event.Tier, v.Payload.Event.IsGift))
 	}
 }
 
@@ -224,58 +230,58 @@ func handleNotificationChannelSubscriptionMessage(r *Responce, raw []byte) {
 	v := &ResponceChannelSubscriptionMessage{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		log.Println("ERR(ReadMessage): ", err)
+		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
 	}
-	fmt.Printf(">event: ReSubscribed [user:%v] [tear:%v] [get %v month subscription] [continous:%v month] [total:%v month]\n",
-		v.Payload.Event.UserName, v.Payload.Event.Tier, v.Payload.Event.DurationMonths, v.Payload.Event.StreakMonths, v.Payload.Event.CumulativeMonths)
+	logger.Info(fmt.Sprintf(">event: ReSubscribed [user:%v] [tear:%v] [get %v month subscription] [continous:%v month] [total:%v month]",
+		v.Payload.Event.UserName, v.Payload.Event.Tier, v.Payload.Event.DurationMonths, v.Payload.Event.StreakMonths, v.Payload.Event.CumulativeMonths))
 }
 
 func handleNotificationChannelCheer(r *Responce, raw []byte) {
 	v := &ResponceChannelCheer{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		log.Println("ERR(ReadMessage): ", err)
+		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
 	}
-	fmt.Printf(">event: Cheer [user:%v] [anonymous:%v] [bits %v] [msg:%v]\n",
-		v.Payload.Event.UserName, v.Payload.Event.IsAnonymous, v.Payload.Event.Bits, v.Payload.Event.Message)
+	logger.Info(fmt.Sprintf(">event: Cheer [user:%v] [anonymous:%v] [bits %v] [msg:%v]",
+		v.Payload.Event.UserName, v.Payload.Event.IsAnonymous, v.Payload.Event.Bits, v.Payload.Event.Message))
 }
 
 func handleNotificationStreamOnline(r *Responce, raw []byte) {
 	v := &ResponceStreamOnline{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		log.Println("ERR(ReadMessage): ", err)
+		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
 	}
-	fmt.Printf(">event: Online [user:%v] [at:%v]\n",
-		v.Payload.Event.BroadcasterUserName, v.Payload.Event.StartedAt)
+	logger.Info(fmt.Sprintf(">event: Online [user:%v] [at:%v]",
+		v.Payload.Event.BroadcasterUserName, v.Payload.Event.StartedAt))
 }
 
 func handleNotificationStreamOffline(r *Responce, raw []byte) {
 	v := &ResponceStreamOffline{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		log.Println("ERR(ReadMessage): ", err)
+		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
 	}
-	fmt.Printf(">event: Offline [user:%v]\n",
-		v.Payload.Event.BroadcasterUserName)
+	logger.Info(fmt.Sprintf(">event: Offline [user:%v]",
+		v.Payload.Event.BroadcasterUserName))
 }
 
 func handleNotificationChannelPointsCustomRewardRedemptionAdd(r *Responce, raw []byte) {
 	v := &ResponceChannelPointsCustomRewardRedemptionAdd{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		log.Println("ERR(ReadMessage): ", err)
+		logger.Info(fmt.Sprintln("ERR(ReadMessage): ", err))
 	}
-	fmt.Printf(">event: Channel Points [user:%v] [title:%v]\n",
-		v.Payload.Event.BroadcasterUserName, v.Payload.Event.Reward.Title)
+	logger.Info(fmt.Sprintf(">event: Channel Points [user:%v] [title:%v]",
+		v.Payload.Event.BroadcasterUserName, v.Payload.Event.Reward.Title))
 }
 
 func handleNotification(r *Responce, raw []byte) {
-	fmt.Println("type ", r.Payload.Subscription.Type)
+	log.Println("type ", r.Payload.Subscription.Type)
 	if e, exists := SubscribeHandlerList[r.Payload.Subscription.Type]; exists {
 		e.Handler(r, raw)
 	} else {
-		fmt.Println("UNKNOWN notification", r.Payload.Subscription.Type)
+		logger.Info("UNKNOWN notification " + r.Payload.Subscription.Type)
 	}
 }
 
@@ -288,19 +294,19 @@ func progress(done *chan struct{}, conn *websocket.Conn) {
 		log.Printf("recv: type[%v]", r.Metadata.MessageType)
 		switch r.Metadata.MessageType {
 		case "session_welcome":
-			fmt.Println("event: connected")
+			log.Println("event: connected")
 			handleSessionWelcome(r, raw)
 		case "session_keepalive":
-			fmt.Println("event: keepalive")
+			log.Println("event: keepalive")
 		case "session_reconnect":
-			fmt.Println("event: reconnect")
+			log.Println("event: reconnect")
 		case "notification":
-			fmt.Println("event: notification")
+			log.Println("event: notification")
 			handleNotification(r, raw)
 		case "revocation":
-			fmt.Println("event: revocation")
+			log.Println("event: revocation")
 		default:
-			fmt.Println("event: UNKNOWN", r.Metadata.MessageType)
+			log.Println("event: UNKNOWN", r.Metadata.MessageType)
 		}
 	}
 }
@@ -327,7 +333,7 @@ func main() {
 	for {
 		select {
 		case <-done:
-			fmt.Println("done")
+			logger.Info("done")
 			return
 		//case t := <-ticker.C:
 		//	err := c.WriteMessage(websocket.TextMessage, []byte(t.String()))
@@ -337,13 +343,13 @@ func main() {
 		//		return
 		//	}
 		case <-interrupt:
-			log.Println("interrupt")
+			logger.Info("interrupt")
 
 			// Cleanly close the connection by sending a close message and then
 			// waiting (with timeout) for the server to close the connection.
 			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			if err != nil {
-				log.Println("write close:", err)
+				logger.Info("write close:" + err.Error())
 				return
 			}
 			select {
