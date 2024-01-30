@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	slogmulti "github.com/samber/slog-multi"
 )
 
 type SessionHandler func(*Responce, []byte)
@@ -28,9 +29,9 @@ const (
 )
 
 var (
-	logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
 	Debug  = flag.Bool("debug", false, "debug mode")
 	Test   = flag.Bool("test", false, "local test mode")
+	logger *slog.Logger
 
 	scheme = "wss"
 	addr   = flag.String("addr", "eventsub.wss.twitch.tv", "http service address")
@@ -164,8 +165,7 @@ func handleSessionWelcome(cfg *Config, r *Responce, raw []byte) {
 			Transport: t,
 		}
 		bin, _ := json.Marshal(&body)
-		logger.Info("Session Welcome", "SessionID", r.Payload.Session.Id, "User", cfg.TargetUser)
-		logger.Info("create EventSub", "Type", k)
+		logger.Info("create EventSub", "SessionID", r.Payload.Session.Id, "User", cfg.TargetUser, "Type", k, "Raw", string(bin))
 		_, err := issueEventSubRequest(cfg, "POST", "https://api.twitch.tv/helix/eventsub/subscriptions", bytes.NewReader(bin))
 		if err != nil {
 			logger.Error("Eventsub Request", "ERROR", err.Error())
@@ -313,8 +313,29 @@ func progress(done *chan struct{}, cfg *Config, conn *websocket.Conn) {
 	}
 }
 
+func buildLogPath() string {
+	n := time.Now()
+	return fmt.Sprintf("%v.txt", n.Format("20060102_1504"))
+}
+
+func buildLogger(logPath string, debug bool) {
+	log, _ := os.Create(logPath)
+	if debug {
+		logger = slog.New(
+			slogmulti.Fanout(
+				slog.NewTextHandler(os.Stdout, nil),
+				slog.NewTextHandler(log, nil),
+			),
+		)
+	} else {
+		logger = slog.New(slog.NewTextHandler(log, nil))
+	}
+}
+
 func main() {
 	flag.Parse()
+	path := buildLogPath()
+	buildLogger(path, *Debug)
 	cfg, err := loadConfig()
 	if err != nil {
 		panic(nil)
