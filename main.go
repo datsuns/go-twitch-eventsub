@@ -24,11 +24,8 @@ type SessionHandlerEntry struct {
 }
 
 const (
-	LocalTestAddr          = "127.0.0.1:8080"
-	LocalTestScheme        = "ws"
-	DEFAULT_SUBSCRIBE_USER = "DEFAULT_SUBSCRIBE_USER"
-	MY_TWITCH_AUTH_CODE    = "MY_TWITCH_AUTH_CODE"
-	MY_TWITCH_CLIENT_ID    = "MY_TWITCH_CLIENT_ID"
+	LocalTestAddr   = "127.0.0.1:8080"
+	LocalTestScheme = "ws"
 )
 
 var (
@@ -38,7 +35,6 @@ var (
 
 	scheme = "wss"
 	addr   = flag.String("addr", "eventsub.wss.twitch.tv", "http service address")
-	user   = flag.String("user", os.Getenv(DEFAULT_SUBSCRIBE_USER), "subscription target user")
 
 	path      = "/ws"
 	query     = "keepalive_timeout_seconds=30"
@@ -81,19 +77,17 @@ type CreateSubscriptionBody struct {
 	Transport SubscriptionTransport `json:"transport"`
 }
 
-func issueEventSubRequest(method, url string, body io.Reader) ([]byte, error) {
-	authCode := os.Getenv(MY_TWITCH_AUTH_CODE)
-	clientId := os.Getenv(MY_TWITCH_CLIENT_ID)
+func issueEventSubRequest(cfg *Config, method, url string, body io.Reader) ([]byte, error) {
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return nil, err
 	}
 	if *Debug {
-		logger.Info(fmt.Sprintf("  auth[%v] client[%v]", authCode, clientId))
+		logger.Info(fmt.Sprintf("  auth[%v] client[%v]", cfg.AuthCode, cfg.ClientId))
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authCode))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", cfg.AuthCode))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Client-Id", clientId)
+	req.Header.Set("Client-Id", cfg.ClientId)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -149,11 +143,10 @@ func receive(conn *websocket.Conn) (*Responce, []byte, error) {
 }
 
 // https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#subscription-types
-func handleSessionWelcome(r *Responce, raw []byte) {
-	logger.Info(fmt.Sprintln("session ID is", r.Payload.Session.Id, "target user [", *user, "]"))
+func handleSessionWelcome(cfg *Config, r *Responce, raw []byte) {
 	c := SubscriptionCondition{
-		BroadcasterUserId: *user,
-		UserId:            *user,
+		BroadcasterUserId: cfg.TargetUser,
+		UserId:            cfg.TargetUser,
 	}
 	t := SubscriptionTransport{
 		Method:    "websocket",
@@ -167,8 +160,9 @@ func handleSessionWelcome(r *Responce, raw []byte) {
 			Transport: t,
 		}
 		bin, _ := json.Marshal(&body)
+		logger.Info(fmt.Sprintf("session ID[%v] user[%v]", r.Payload.Session.Id, cfg.TargetUser))
 		logger.Info(fmt.Sprintf("create EventSub [%v]", k))
-		_, err := issueEventSubRequest("POST", "https://api.twitch.tv/helix/eventsub/subscriptions", bytes.NewReader(bin))
+		_, err := issueEventSubRequest(cfg, "POST", "https://api.twitch.tv/helix/eventsub/subscriptions", bytes.NewReader(bin))
 		if err != nil {
 			logger.Info(fmt.Sprintln("ERR(Eventsub Request): ", err))
 		}
@@ -276,7 +270,7 @@ func handleNotificationChannelPointsCustomRewardRedemptionAdd(r *Responce, raw [
 		v.Payload.Event.BroadcasterUserName, v.Payload.Event.Reward.Title))
 }
 
-func handleNotification(r *Responce, raw []byte) {
+func handleNotification(cfg *Config, r *Responce, raw []byte) {
 	log.Println("type ", r.Payload.Subscription.Type)
 	if e, exists := SubscribeHandlerList[r.Payload.Subscription.Type]; exists {
 		e.Handler(r, raw)
@@ -285,7 +279,7 @@ func handleNotification(r *Responce, raw []byte) {
 	}
 }
 
-func progress(done *chan struct{}, conn *websocket.Conn) {
+func progress(done *chan struct{}, cfg *Config, conn *websocket.Conn) {
 	for {
 		r, raw, err := receive(conn)
 		if err != nil {
@@ -295,14 +289,14 @@ func progress(done *chan struct{}, conn *websocket.Conn) {
 		switch r.Metadata.MessageType {
 		case "session_welcome":
 			log.Println("event: connected")
-			handleSessionWelcome(r, raw)
+			handleSessionWelcome(cfg, r, raw)
 		case "session_keepalive":
 			log.Println("event: keepalive")
 		case "session_reconnect":
 			log.Println("event: reconnect")
 		case "notification":
 			log.Println("event: notification")
-			handleNotification(r, raw)
+			handleNotification(cfg, r, raw)
 		case "revocation":
 			log.Println("event: revocation")
 		default:
@@ -314,6 +308,10 @@ func progress(done *chan struct{}, conn *websocket.Conn) {
 func main() {
 	flag.Parse()
 	log.SetFlags(0)
+	cfg, err := loadConfig()
+	if err != nil {
+		panic(nil)
+	}
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
@@ -324,7 +322,7 @@ func main() {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		progress(&done, c)
+		progress(&done, cfg, c)
 	}()
 
 	ticker := time.NewTicker(time.Second)
