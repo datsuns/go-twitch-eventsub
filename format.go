@@ -63,20 +63,34 @@ type Responce struct {
 
 // --------------------------------------------------------
 type EventFormatChatMessage struct {
-	*EventFormatCommon
-	FollowedAt       string `json:"followed_at"`
-	ChatterUserId    string `json:"chatter_user_id"`
-	ChatterUserLogin string `json:"chatter_user_login"`
-	ChatterUserName  string `json:"chatter_user_name"`
-	MessageId        string `json:"message_id"`
-	Message          struct {
+	BroadcasterUserId    string `json:"broadcaster_user_id"`
+	BroadcasterUserLogin string `json:"broadcaster_user_login"`
+	BroadcasterUserName  string `json:"broadcaster_user_name"`
+	ChatterUserId        string `json:"chatter_user_id"`
+	ChatterUserLogin     string `json:"chatter_user_login"`
+	ChatterUserName      string `json:"chatter_user_name"`
+	MessageId            string `json:"message_id"`
+	Message              struct {
 		Text      string `json:"text"`
 		Fragments []struct {
 			Type      string `json:"type"`
 			Text      string `json:"text"`
-			Cheermote string `json:"cheermote"`
-			Emote     string `json:"emote"`
-			Mention   string `json:"mention"`
+			Cheermote struct {
+				Prefix string `json:"prefix"`
+				Bits   int    `json:"bits"`
+				Tier   int    `json:"tier"`
+			} `json:"cheermote"`
+			Emote struct {
+				Id         string   `json:"id"`
+				EmoteSetId string   `json:"emote_set_id"`
+				OwnerId    string   `json:"owner_id"`
+				Format     []string `json:"format"`
+			} `json:"emote"`
+			Mention struct {
+				UserId    string `json:"user_id"`
+				UserName  string `json:"user_name"`
+				UserLogin string `json:"user_login"`
+			} `json:"mention"`
 		} `json:"fragments"`
 	} `json:"message"`
 	Color  string `json:"color"`
