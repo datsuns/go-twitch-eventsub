@@ -223,17 +223,17 @@ func handleNotificationChannelChatMessage(r *Responce, raw []byte) {
 	v := &ResponceChatMessage{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Error("ReadMessage " + err.Error())
+		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
-	logger.Info("event(ChatMsg)", "user", e.ChatterUserLogin, "text", e.Message.Text)
+	logger.Info("event(ChatMsg)", "user", e.ChatterUserLogin, "name", e.ChatterUserName, "text", e.Message.Text)
 }
 
 func handleNotificationChannelChatNotification(r *Responce, raw []byte) {
 	v := &ResponceChannelChatNotification{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Error("ReadMessage " + err.Error())
+		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
 	switch e.NoticeType {
@@ -259,7 +259,7 @@ func handleNotificationChannelSubscribe(r *Responce, raw []byte) {
 	v := &ResponceChannelSubscribe{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Error("ReadMessage " + err.Error())
+		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
 	if v.Payload.Event.IsGift {
@@ -273,7 +273,7 @@ func handleNotificationChannelSubscriptionMessage(r *Responce, raw []byte) {
 	v := &ResponceChannelSubscriptionMessage{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Error("ReadMessage " + err.Error())
+		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
 	logger.Info("event(ReSubscribed)", "user", e.UserName, "tear", e.Tier,
@@ -284,7 +284,7 @@ func handleNotificationChannelCheer(r *Responce, raw []byte) {
 	v := &ResponceChannelCheer{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Error("ReadMessage " + err.Error())
+		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
 	logger.Info("event(Cheer)", "user", e.UserName, "anonymous", e.IsAnonymous, "bits", e.Bits, "msg", e.Message)
@@ -294,7 +294,7 @@ func handleNotificationStreamOnline(r *Responce, raw []byte) {
 	v := &ResponceStreamOnline{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Error("ReadMessage " + err.Error())
+		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
 	logger.Info("event(Online)", "user", e.BroadcasterUserName, "at", e.StartedAt)
@@ -304,7 +304,7 @@ func handleNotificationStreamOffline(r *Responce, raw []byte) {
 	v := &ResponceStreamOffline{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Error("ReadMessage " + err.Error())
+		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
 	logger.Info("event(Offline)", "user", e.BroadcasterUserName)
@@ -314,7 +314,7 @@ func handleNotificationChannelPointsCustomRewardRedemptionAdd(r *Responce, raw [
 	v := &ResponceChannelPointsCustomRewardRedemptionAdd{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
-		logger.Error("ReadMessage " + err.Error())
+		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
 	logger.Info("event(Channel Points)", "user", e.BroadcasterUserName, "title", e.Reward.Title)
