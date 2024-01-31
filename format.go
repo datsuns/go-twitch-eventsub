@@ -1,5 +1,13 @@
 package main
 
+type GetUsersApiResponce struct {
+	Data []struct {
+		Id          string `json:"id"`
+		Login       string `json:"login"`
+		DisplayName string `json:"display_name"`
+	} `json:"data"`
+}
+
 type MetadataFormat struct {
 	MessageId           string `json:"message_id"`
 	MessageType         string `json:"message_type"`

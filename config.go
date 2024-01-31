@@ -8,9 +8,10 @@ import (
 )
 
 type Config struct {
-	TargetUser string `yaml:"SUBSCRIBE_USER"`
-	AuthCode   string `yaml:"AUTH_CODE"`
-	ClientId   string `yaml:"CLIENT_ID"`
+	TargetUser   string `yaml:"SUBSCRIBE_USER"`
+	AuthCode     string `yaml:"AUTH_CODE"`
+	ClientId     string `yaml:"CLIENT_ID"`
+	TargetUserId string
 }
 
 func loadConfig() (*Config, error) {

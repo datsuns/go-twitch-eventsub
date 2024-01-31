@@ -117,7 +117,10 @@ func issueEventSubRequest(cfg *Config, method, url string, body io.Reader) ([]by
 	if *Debug {
 		logger.Info("request", "Status", resp.Status, "URL", url, "RawRet", string(byteArray))
 	}
-	if resp.StatusCode != 202 {
+	switch resp.StatusCode {
+	case 200:
+	case 202:
+	default:
 		return nil, fmt.Errorf("error responce. status[%v] msg[%v]", resp.StatusCode, string(byteArray))
 	}
 	return byteArray, nil
@@ -371,6 +374,21 @@ func buildLogger(logPath string, debug bool) {
 	}
 }
 
+func referTargetUserId(cfg *Config) string {
+	url := fmt.Sprintf("https://api.twitch.tv/helix/users?login=%v", cfg.TargetUser)
+	ret, err := issueEventSubRequest(cfg, "GET", url, nil)
+	if err != nil {
+		logger.Error("Eventsub Request", "ERROR", err.Error())
+	}
+	r := &GetUsersApiResponce{}
+	err = json.Unmarshal(ret, &r)
+	if err != nil {
+		logger.Error("json.Unmarshal", "ERR", err.Error())
+	}
+	logger.Info("SubscribeTarget", "id", r.Data[0].Id, "name", r.Data[0].DisplayName)
+	return r.Data[0].Id
+}
+
 func main() {
 	flag.Parse()
 	path := buildLogPath()
@@ -379,6 +397,7 @@ func main() {
 	if err != nil {
 		panic(nil)
 	}
+	cfg.TargetUserId = referTargetUserId(cfg)
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
