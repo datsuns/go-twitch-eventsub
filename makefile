@@ -7,4 +7,7 @@ run:
 rund:
 	go run main.go format.go config.go -debug
 
+clean:
+	rm *.txt
+
 .PHONY: run rund test
