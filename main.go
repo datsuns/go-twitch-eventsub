@@ -382,6 +382,9 @@ func progress(done *chan struct{}, cfg *Config, conn *websocket.Conn) {
 }
 
 func buildLogPath() string {
+	if *Test {
+		return "local.test.txt"
+	}
 	n := time.Now()
 	return fmt.Sprintf("%v.txt", n.Format("20060102_1504"))
 }
