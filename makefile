@@ -18,6 +18,6 @@ clean:
 
 release:
 	go build
-	cp ./config.yaml ./go-twitch-eventsub-client.exe ../../../test
+	cp ./go-twitch-eventsub-client.exe ../../../test
 
 .PHONY: test testd run rund clean

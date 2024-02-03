@@ -50,13 +50,17 @@ func addLogFields(fields map[string]any, a slog.Attr) {
 	fields[a.Key] = innerFields
 }
 
-func (t *TwitchInfoLogger) Handle(_ context.Context, r slog.Record) error {
+func (t *TwitchInfoLogger) Handle(c context.Context, r slog.Record) error {
 	split := "   "
 	fields := make(map[string]any, r.NumAttrs())
 	r.Attrs(func(a slog.Attr) bool {
 		addLogFields(fields, a)
 		return true
 	})
+	if fields["type"] == nil {
+		t.w.Write([]byte(fmt.Sprintf("%v\n", fields)))
+		return nil
+	}
 	log := r.Time.Format("2006/01/02 15:04:05 ")
 	pattern := fmt.Sprintf("%v", fields["type"])
 	if s, exists := TypeToTitle[pattern]; exists {

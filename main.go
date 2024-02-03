@@ -403,16 +403,14 @@ func buildLogPath() string {
 
 func buildLogger(logPath string, debug bool) (*slog.Logger, *slog.Logger) {
 	log, _ := os.OpenFile(logPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0666)
-	if debug {
-		return slog.New(
-			slogmulti.Fanout(
-				slog.NewTextHandler(os.Stdout, nil),
-			),
-		), slog.New(NewTwitchInfoLogger(log))
-	} else {
-		return slog.New(slog.NewTextHandler(os.Stdout, nil)),
-			slog.New(NewTwitchInfoLogger(log))
-	}
+	runlog, _ := os.OpenFile("debug.txt", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0666)
+	return slog.New(
+		slogmulti.Fanout(
+			slog.NewTextHandler(os.Stdout, nil),
+			slog.NewTextHandler(runlog, nil),
+			NewTwitchInfoLogger(os.Stdout),
+		),
+	), slog.New(NewTwitchInfoLogger(log))
 
 }
 
