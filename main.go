@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
@@ -99,40 +96,6 @@ type CreateSubscriptionBodyWithUser struct {
 	Version   string                   `json:"version"`
 	Condition RequestConditionWithUser `json:"condition"`
 	Transport SubscriptionTransport    `json:"transport"`
-}
-
-func issueEventSubRequest(cfg *Config, method, url string, body io.Reader) ([]byte, error) {
-	req, err := http.NewRequest(method, url, body)
-	if err != nil {
-		return nil, err
-	}
-	if *Debug {
-		logger.Info("rest auth", "Auth", cfg.AuthCode, "ClientID", cfg.ClientId)
-	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", cfg.AuthCode))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Client-Id", cfg.ClientId)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	byteArray, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if *Debug {
-		logger.Info("request", "Status", resp.Status, "URL", url, "RawRet", string(byteArray))
-	}
-	switch resp.StatusCode {
-	case 200:
-	case 202:
-	default:
-		return nil, fmt.Errorf("error responce. status[%v] msg[%v]", resp.StatusCode, string(byteArray))
-	}
-	return byteArray, nil
 }
 
 func buildQuery() string {
@@ -231,10 +194,11 @@ func buildRequestWithUser(cfg *Config, r *Responce, subscType, version string) [
 
 // https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#subscription-types
 func handleSessionWelcome(cfg *Config, r *Responce, raw []byte) {
+	if *Test {
+		return
+	}
 	for k, v := range SubscribeHandlerList {
-		bin := v.Builder(cfg, r, k, v.Version)
-		logger.Info("create EventSub", "SessionID", r.Payload.Session.Id, "User", cfg.TargetUserId, "Type", k, "Raw", string(bin))
-		_, err := issueEventSubRequest(cfg, "POST", "https://api.twitch.tv/helix/eventsub/subscriptions", bytes.NewReader(bin))
+		err := createEventSubscription(cfg, r, k, &v)
 		if err != nil {
 			logger.Error("Eventsub Request", "ERROR", err.Error())
 		}
@@ -380,7 +344,6 @@ func progress(done *chan struct{}, cfg *Config, conn *websocket.Conn) {
 		}
 	}
 }
-
 func buildLogPath() string {
 	if *Test {
 		return "local.test.txt"
@@ -401,21 +364,6 @@ func buildLogger(logPath string, debug bool) {
 	} else {
 		logger = slog.New(slog.NewTextHandler(log, nil))
 	}
-}
-
-func referTargetUserId(cfg *Config) string {
-	url := fmt.Sprintf("https://api.twitch.tv/helix/users?login=%v", cfg.TargetUser)
-	ret, err := issueEventSubRequest(cfg, "GET", url, nil)
-	if err != nil {
-		logger.Error("Eventsub Request", "ERROR", err.Error())
-	}
-	r := &GetUsersApiResponce{}
-	err = json.Unmarshal(ret, &r)
-	if err != nil {
-		logger.Error("json.Unmarshal", "ERR", err.Error())
-	}
-	logger.Info("SubscribeTarget", "id", r.Data[0].Id, "name", r.Data[0].DisplayName)
-	return r.Data[0].Id
 }
 
 func main() {
