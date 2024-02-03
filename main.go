@@ -16,7 +16,7 @@ import (
 
 type RequestBuilder func(*Config, *Responce, string, string) []byte
 type SessionHandler func(*Responce, []byte)
-type SessionHandlerEntry struct {
+type EventSubHandlerEntry struct {
 	Version string
 	Builder RequestBuilder
 	Handler SessionHandler
@@ -40,7 +40,7 @@ var (
 	keepalive = flag.String("keepalive", "30", "keepalive timeout")
 
 	// https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#subscription-types
-	SubscribeHandlerList = map[string]SessionHandlerEntry{
+	SubscribeHandlerList = map[string]EventSubHandlerEntry{
 		"channel.subscribe":            {"1", buildRequest, handleNotificationChannelSubscribe}, // channel:read:subscriptions
 		"channel.cheer":                {"1", buildRequest, handleNotificationChannelCheer},     // bits:read
 		"stream.online":                {"1", buildRequest, handleNotificationStreamOnline},
