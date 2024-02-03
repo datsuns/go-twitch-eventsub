@@ -315,6 +315,9 @@ func handleNotificationChannelCheer(r *Responce, raw []byte) {
 }
 
 func handleNotificationStreamOnline(r *Responce, raw []byte) {
+	path := buildLogPath()
+	_, infoLogger = buildLogger(path, *Debug)
+
 	v := &ResponceStreamOnline{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -395,11 +398,11 @@ func buildLogPath() string {
 		return "local.test.txt"
 	}
 	n := time.Now()
-	return fmt.Sprintf("%v.txt", n.Format("20060102_1504"))
+	return fmt.Sprintf("%v.txt", n.Format("20060102"))
 }
 
 func buildLogger(logPath string, debug bool) (*slog.Logger, *slog.Logger) {
-	log, _ := os.Create(logPath)
+	log, _ := os.OpenFile(logPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0666)
 	if debug {
 		return slog.New(
 			slogmulti.Fanout(
