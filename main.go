@@ -28,9 +28,10 @@ const (
 )
 
 var (
-	Debug  = flag.Bool("debug", false, "debug mode")
-	Test   = flag.Bool("test", false, "local test mode")
-	logger *slog.Logger
+	Debug      = flag.Bool("debug", false, "debug mode")
+	Test       = flag.Bool("test", false, "local test mode")
+	logger     *slog.Logger
+	infoLogger *slog.Logger
 
 	scheme = "wss"
 	addr   = flag.String("addr", "eventsub.wss.twitch.tv", "http service address")
@@ -206,7 +207,9 @@ func handleSessionWelcome(cfg *Config, r *Responce, raw []byte) {
 }
 
 func handleNotificationDefault(r *Responce, raw []byte) {
-	logger.Info("event(no handler)", "Type", r.Payload.Subscription.Type)
+	infoLogger.Info("event(no handler)",
+		slog.Any("type", r.Payload.Subscription.Type),
+	)
 }
 
 func handleNotificationChannelChatMessage(r *Responce, raw []byte) {
@@ -216,7 +219,12 @@ func handleNotificationChannelChatMessage(r *Responce, raw []byte) {
 		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
-	logger.Info("event(ChatMsg)", "user", e.ChatterUserLogin, "name", e.ChatterUserName, "text", e.Message.Text)
+	infoLogger.Info("event(ChatMsg)",
+		slog.Any("type", r.Payload.Subscription.Type),
+		slog.Any("user", e.ChatterUserLogin),
+		slog.Any("name", e.ChatterUserName),
+		slog.Any("text", e.Message.Text),
+	)
 }
 
 func handleNotificationChannelChatNotification(r *Responce, raw []byte) {
@@ -228,7 +236,11 @@ func handleNotificationChannelChatNotification(r *Responce, raw []byte) {
 	e := &v.Payload.Event
 	switch e.NoticeType {
 	case "raid":
-		logger.Info("event(Raid)", "from", e.RaId.UserName, "viewers", e.RaId.ViewerCount)
+		infoLogger.Info("event(Raid)",
+			slog.Any("type", r.Payload.Subscription.Type),
+			slog.Any("from", e.RaId.UserName),
+			slog.Any("viewers", e.RaId.ViewerCount),
+		)
 	case "sub":
 	case "resub":
 	case "sub_gift":
@@ -253,9 +265,19 @@ func handleNotificationChannelSubscribe(r *Responce, raw []byte) {
 	}
 	e := &v.Payload.Event
 	if v.Payload.Event.IsGift {
-		logger.Info("event(Subscribed<Gift>)", "user", e.UserName, "tear", e.Tier, "gift", e.IsGift)
+		infoLogger.Info("event(Subscribed<Gift>)",
+			slog.Any("type", r.Payload.Subscription.Type),
+			slog.Any("user", e.UserName),
+			slog.Any("tear", e.Tier),
+			slog.Any("gift", e.IsGift),
+		)
 	} else {
-		logger.Info("event(Subscribed)", "user", e.UserName, "tear", e.Tier, "gift", e.IsGift)
+		infoLogger.Info("event(Subscribed)",
+			slog.Any("type", r.Payload.Subscription.Type),
+			slog.Any("user", e.UserName),
+			slog.Any("tear", e.Tier),
+			slog.Any("gift", e.IsGift),
+		)
 	}
 }
 
@@ -266,8 +288,14 @@ func handleNotificationChannelSubscriptionMessage(r *Responce, raw []byte) {
 		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
-	logger.Info("event(ReSubscribed)", "user", e.UserName, "tear", e.Tier,
-		"duration", e.DurationMonths, "streak", e.StreakMonths, "cumlative", e.CumulativeMonths)
+	infoLogger.Info("event(ReSubscribed)",
+		slog.Any("type", r.Payload.Subscription.Type),
+		slog.Any("user", e.UserName),
+		slog.Any("tear", e.Tier),
+		slog.Any("duration", e.DurationMonths),
+		slog.Any("streak", e.StreakMonths),
+		slog.Any("cumlative", e.CumulativeMonths),
+	)
 }
 
 func handleNotificationChannelCheer(r *Responce, raw []byte) {
@@ -277,7 +305,13 @@ func handleNotificationChannelCheer(r *Responce, raw []byte) {
 		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
-	logger.Info("event(Cheer)", "user", e.UserName, "anonymous", e.IsAnonymous, "bits", e.Bits, "msg", e.Message)
+	infoLogger.Info("event(Cheer)",
+		slog.Any("type", r.Payload.Subscription.Type),
+		slog.Any("user", e.UserName),
+		slog.Any("anonymous", e.IsAnonymous),
+		slog.Any("bits", e.Bits),
+		slog.Any("msg", e.Message),
+	)
 }
 
 func handleNotificationStreamOnline(r *Responce, raw []byte) {
@@ -287,7 +321,11 @@ func handleNotificationStreamOnline(r *Responce, raw []byte) {
 		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
-	logger.Info("event(Online)", "user", e.BroadcasterUserName, "at", e.StartedAt)
+	infoLogger.Info("event(Online)",
+		slog.Any("type", r.Payload.Subscription.Type),
+		slog.Any("user", e.BroadcasterUserName),
+		slog.Any("at", e.StartedAt),
+	)
 }
 
 func handleNotificationStreamOffline(r *Responce, raw []byte) {
@@ -297,7 +335,10 @@ func handleNotificationStreamOffline(r *Responce, raw []byte) {
 		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
-	logger.Info("event(Offline)", "user", e.BroadcasterUserName)
+	infoLogger.Info("event(Offline)",
+		slog.Any("type", r.Payload.Subscription.Type),
+		slog.Any("user", e.BroadcasterUserName),
+	)
 }
 
 func handleNotificationChannelPointsCustomRewardRedemptionAdd(r *Responce, raw []byte) {
@@ -307,7 +348,12 @@ func handleNotificationChannelPointsCustomRewardRedemptionAdd(r *Responce, raw [
 		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
-	logger.Info("event(Channel Points)", "user", e.UserLogin, "name", e.UserName, "title", e.Reward.Title)
+	infoLogger.Info("event(Channel Points)",
+		slog.Any("type", r.Payload.Subscription.Type),
+		slog.Any("user", e.UserLogin),
+		slog.Any("name", e.UserName),
+		slog.Any("title", e.Reward.Title),
+	)
 }
 
 func handleNotification(cfg *Config, r *Responce, raw []byte) {
@@ -352,24 +398,25 @@ func buildLogPath() string {
 	return fmt.Sprintf("%v.txt", n.Format("20060102_1504"))
 }
 
-func buildLogger(logPath string, debug bool) {
+func buildLogger(logPath string, debug bool) (*slog.Logger, *slog.Logger) {
 	log, _ := os.Create(logPath)
 	if debug {
-		logger = slog.New(
+		return slog.New(
 			slogmulti.Fanout(
 				slog.NewTextHandler(os.Stdout, nil),
-				slog.NewTextHandler(log, nil),
 			),
-		)
+		), slog.New(NewTwitchInfoLogger(log))
 	} else {
-		logger = slog.New(slog.NewTextHandler(log, nil))
+		return slog.New(slog.NewTextHandler(os.Stdout, nil)),
+			slog.New(NewTwitchInfoLogger(log))
 	}
+
 }
 
 func main() {
 	flag.Parse()
 	path := buildLogPath()
-	buildLogger(path, *Debug)
+	logger, infoLogger = buildLogger(path, *Debug)
 	cfg, err := loadConfig()
 	if err != nil {
 		panic(nil)
