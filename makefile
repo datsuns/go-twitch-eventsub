@@ -1,14 +1,16 @@
+SRC := main.go format.go config.go
+
 test:
-	go run main.go format.go config.go -test
+	go run $(SRC) -test
 
 testd:
-	go run main.go format.go config.go -test -debug
+	go run $(SRC) -test -debug
 
 run:
-	go run main.go format.go config.go 
+	go run $(SRC)
 
 rund:
-	go run main.go format.go config.go -debug
+	go run $(SRC) -debug
 
 clean:
 	rm *.txt
