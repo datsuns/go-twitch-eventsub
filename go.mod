@@ -1,4 +1,4 @@
-module go-twitch-eventsub-client
+module twichevent
 
 go 1.21.3
 
