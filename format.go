@@ -407,8 +407,8 @@ type ResponceStreamOffline struct {
 
 // --------------------------------------------------------
 type EventFormatChannelPointsCustomRewardRedemptionAdd struct {
+	Id string `json:"id"`
 	*EventFormatCommon
-	Id        string `json:"id"`
 	UserInput string `json:"user_input"`
 	Status    string `json:"status"`
 	Reward    struct {

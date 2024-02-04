@@ -112,14 +112,14 @@ func handleNotificationChannelSubscribe(_ *Config, r *Responce, raw []byte) {
 	if v.Payload.Event.IsGift {
 		infoLogger.Info("event(Subscribed<Gift>)",
 			slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
-			slog.Any("user", e.UserName),
+			slog.Any(LogFieldName_UserName, e.UserName),
 			slog.Any("tear", e.Tier),
 			slog.Any("gift", e.IsGift),
 		)
 	} else {
 		infoLogger.Info("event(Subscribed)",
 			slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
-			slog.Any("user", e.UserName),
+			slog.Any(LogFieldName_UserName, e.UserName),
 			slog.Any("tear", e.Tier),
 			slog.Any("gift", e.IsGift),
 		)
@@ -135,7 +135,7 @@ func handleNotificationChannelCheer(_ *Config, r *Responce, raw []byte) {
 	e := &v.Payload.Event
 	infoLogger.Info("event(Cheer)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
-		slog.Any("user", e.UserName),
+		slog.Any(LogFieldName_UserName, e.UserName),
 		slog.Any("anonymous", e.IsAnonymous),
 		slog.Any("bits", e.Bits),
 		slog.Any("msg", e.Message),
@@ -154,7 +154,7 @@ func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte) {
 	e := &v.Payload.Event
 	infoLogger.Info("event(Online)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
-		slog.Any("user", e.BroadcasterUserName),
+		slog.Any(LogFieldName_UserName, e.BroadcasterUserName),
 		slog.Any("at", e.StartedAt),
 	)
 }
@@ -168,7 +168,7 @@ func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte) {
 	e := &v.Payload.Event
 	infoLogger.Info("event(Offline)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
-		slog.Any("user", e.BroadcasterUserName),
+		slog.Any(LogFieldName_UserName, e.BroadcasterUserName),
 	)
 }
 
@@ -181,7 +181,7 @@ func handleNotificationChannelSubscriptionMessage(_ *Config, r *Responce, raw []
 	e := &v.Payload.Event
 	infoLogger.Info("event(ReSubscribed)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
-		slog.Any("user", e.UserName),
+		slog.Any(LogFieldName_UserName, e.UserName),
 		slog.Any("tear", e.Tier),
 		slog.Any("duration", e.DurationMonths),
 		slog.Any("streak", e.StreakMonths),
@@ -198,8 +198,8 @@ func handleNotificationChannelPointsCustomRewardRedemptionAdd(_ *Config, r *Resp
 	e := &v.Payload.Event
 	infoLogger.Info("event(Channel Points)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
-		slog.Any("user", e.UserLogin),
-		slog.Any("name", e.UserName),
+		slog.Any(LogFieldName_UserName, e.UserName),
+		slog.Any("login", e.UserLogin),
 		slog.Any("title", e.Reward.Title),
 	)
 }
@@ -243,8 +243,8 @@ func handleNotificationChannelChatMessage(_ *Config, r *Responce, raw []byte) {
 	e := &v.Payload.Event
 	infoLogger.Info("event(ChatMsg)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
-		slog.Any("user", e.ChatterUserLogin),
-		slog.Any("name", e.ChatterUserName),
+		slog.Any(LogFieldName_UserName, e.ChatterUserName),
+		slog.Any("login", e.ChatterUserLogin),
 		slog.Any("text", e.Message.Text),
 	)
 }
