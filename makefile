@@ -18,6 +18,6 @@ clean:
 
 release:
 	go build
-	cp ./go-twitch-eventsub-client.exe ../../../test
+	cp ./twichevent.exe ../../../test
 
 .PHONY: test testd run rund clean
