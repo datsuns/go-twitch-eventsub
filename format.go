@@ -1,5 +1,51 @@
 package main
 
+// --- request
+
+type RequestCondition struct {
+	BroadcasterUserId string `json:"broadcaster_user_id"`
+}
+
+type RequestConditionWithModerator struct {
+	BroadcasterUserId string `json:"broadcaster_user_id"`
+	ModeratorUserId   string `json:"moderator_user_id"`
+}
+
+type RequestConditionWithUser struct {
+	BroadcasterUserId string `json:"broadcaster_user_id"`
+	UserId            string `json:"user_id"`
+}
+
+type SubscriptionTransport struct {
+	Method    string `json:"method"`
+	Callback  string `json:"callback"`
+	Secret    string `json:"secret"`
+	SessionId string `json:"session_id"`
+	ConduitId string `json:"conduit_id"`
+}
+type CreateSubscriptionBody struct {
+	Type      string                `json:"type"`
+	Version   string                `json:"version"`
+	Condition RequestCondition      `json:"condition"`
+	Transport SubscriptionTransport `json:"transport"`
+}
+
+type CreateSubscriptionBodyWithModerator struct {
+	Type      string                        `json:"type"`
+	Version   string                        `json:"version"`
+	Condition RequestConditionWithModerator `json:"condition"`
+	Transport SubscriptionTransport         `json:"transport"`
+}
+
+type CreateSubscriptionBodyWithUser struct {
+	Type      string                   `json:"type"`
+	Version   string                   `json:"version"`
+	Condition RequestConditionWithUser `json:"condition"`
+	Transport SubscriptionTransport    `json:"transport"`
+}
+
+// --- responce
+
 type GetUsersApiResponce struct {
 	Data []struct {
 		Id          string `json:"id"`
@@ -7,6 +53,8 @@ type GetUsersApiResponce struct {
 		DisplayName string `json:"display_name"`
 	} `json:"data"`
 }
+
+// --- EventSub notification
 
 type MetadataFormat struct {
 	MessageId           string `json:"message_id"`

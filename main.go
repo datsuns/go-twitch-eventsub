@@ -14,17 +14,10 @@ import (
 	slogmulti "github.com/samber/slog-multi"
 )
 
-type RequestBuilder func(*Config, *Responce, string, string) []byte
-type SessionHandler func(*Config, *Responce, []byte)
-type EventSubHandlerEntry struct {
-	Version string
-	Builder RequestBuilder
-	Handler SessionHandler
-}
-
 const (
-	LocalTestAddr   = "127.0.0.1:8080"
-	LocalTestScheme = "ws"
+	LocalTestAddr     = "127.0.0.1:8080"
+	LocalTestScheme   = "ws"
+	LogFieldName_Type = "type"
 )
 
 var (
@@ -32,6 +25,7 @@ var (
 	Test       = flag.Bool("test", false, "local test mode")
 	logger     *slog.Logger
 	infoLogger *slog.Logger
+	logSplit   = "   "
 
 	scheme = "wss"
 	addr   = flag.String("addr", "eventsub.wss.twitch.tv", "http service address")
@@ -39,65 +33,7 @@ var (
 	path      = "/ws"
 	query     = "keepalive_timeout_seconds=30"
 	keepalive = flag.String("keepalive", "30", "keepalive timeout")
-
-	// https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#subscription-types
-	SubscribeHandlerList = map[string]EventSubHandlerEntry{
-		"channel.subscribe":            {"1", buildRequest, handleNotificationChannelSubscribe}, // channel:read:subscriptions
-		"channel.cheer":                {"1", buildRequest, handleNotificationChannelCheer},     // bits:read
-		"stream.online":                {"1", buildRequest, handleNotificationStreamOnline},
-		"stream.offline":               {"1", buildRequest, handleNotificationStreamOffline},
-		"channel.subscription.gift":    {"1", buildRequest, handleNotificationDefault},                    // channel:read:subscriptions
-		"channel.subscription.message": {"1", buildRequest, handleNotificationChannelSubscriptionMessage}, // channel:read:subscriptions
-		"channel.channel_points_custom_reward_redemption.add": {"1", buildRequest, handleNotificationChannelPointsCustomRewardRedemptionAdd}, // channel:read:redemptions
-		"channel.chat.notification":                           {"1", buildRequestWithUser, handleNotificationChannelChatNotification},        // user:read:chat
-		"channel.chat.message":                                {"1", buildRequestWithUser, handleNotificationChannelChatMessage},             // user:read:chat
-		"channel.follow":                                      {"2", buildRequestWithModerator, handleNotificationDefault},                   // moderator:read:followers
-	}
 )
-
-// --- request
-
-type RequestCondition struct {
-	BroadcasterUserId string `json:"broadcaster_user_id"`
-}
-
-type RequestConditionWithModerator struct {
-	BroadcasterUserId string `json:"broadcaster_user_id"`
-	ModeratorUserId   string `json:"moderator_user_id"`
-}
-
-type RequestConditionWithUser struct {
-	BroadcasterUserId string `json:"broadcaster_user_id"`
-	UserId            string `json:"user_id"`
-}
-
-type SubscriptionTransport struct {
-	Method    string `json:"method"`
-	Callback  string `json:"callback"`
-	Secret    string `json:"secret"`
-	SessionId string `json:"session_id"`
-	ConduitId string `json:"conduit_id"`
-}
-type CreateSubscriptionBody struct {
-	Type      string                `json:"type"`
-	Version   string                `json:"version"`
-	Condition RequestCondition      `json:"condition"`
-	Transport SubscriptionTransport `json:"transport"`
-}
-
-type CreateSubscriptionBodyWithModerator struct {
-	Type      string                        `json:"type"`
-	Version   string                        `json:"version"`
-	Condition RequestConditionWithModerator `json:"condition"`
-	Transport SubscriptionTransport         `json:"transport"`
-}
-
-type CreateSubscriptionBodyWithUser struct {
-	Type      string                   `json:"type"`
-	Version   string                   `json:"version"`
-	Condition RequestConditionWithUser `json:"condition"`
-	Transport SubscriptionTransport    `json:"transport"`
-}
 
 func buildQuery() string {
 	return fmt.Sprintf("keepalive_timeout_seconds=%v", *keepalive)
@@ -137,68 +73,13 @@ func receive(conn *websocket.Conn) (*Responce, []byte, error) {
 	}
 	return r, message, nil
 }
-func buildRequestWithModerator(cfg *Config, r *Responce, subscType, version string) []byte {
-	c := RequestConditionWithModerator{
-		BroadcasterUserId: cfg.TargetUserId,
-		ModeratorUserId:   cfg.TargetUserId,
-	}
-	t := SubscriptionTransport{
-		Method:    "websocket",
-		SessionId: r.Payload.Session.Id,
-	}
-	body := CreateSubscriptionBodyWithModerator{
-		Type:      subscType,
-		Version:   version,
-		Condition: c,
-		Transport: t,
-	}
-	bin, _ := json.Marshal(&body)
-	return bin
-}
-
-func buildRequest(cfg *Config, r *Responce, subscType, version string) []byte {
-	c := RequestCondition{
-		BroadcasterUserId: cfg.TargetUserId,
-	}
-	t := SubscriptionTransport{
-		Method:    "websocket",
-		SessionId: r.Payload.Session.Id,
-	}
-	body := CreateSubscriptionBody{
-		Type:      subscType,
-		Version:   version,
-		Condition: c,
-		Transport: t,
-	}
-	bin, _ := json.Marshal(&body)
-	return bin
-}
-
-func buildRequestWithUser(cfg *Config, r *Responce, subscType, version string) []byte {
-	c := RequestConditionWithUser{
-		BroadcasterUserId: cfg.TargetUserId,
-		UserId:            cfg.TargetUserId,
-	}
-	t := SubscriptionTransport{
-		Method:    "websocket",
-		SessionId: r.Payload.Session.Id,
-	}
-	body := CreateSubscriptionBodyWithUser{
-		Type:      subscType,
-		Version:   version,
-		Condition: c,
-		Transport: t,
-	}
-	bin, _ := json.Marshal(&body)
-	return bin
-}
 
 // https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#subscription-types
 func handleSessionWelcome(cfg *Config, r *Responce, raw []byte) {
 	if *Test {
 		return
 	}
-	for k, v := range SubscribeHandlerList {
+	for k, v := range TwitchEventTable {
 		err := createEventSubscription(cfg, r, k, &v)
 		if err != nil {
 			logger.Error("Eventsub Request", "ERROR", err.Error())
@@ -206,162 +87,9 @@ func handleSessionWelcome(cfg *Config, r *Responce, raw []byte) {
 	}
 }
 
-func handleNotificationDefault(_ *Config, r *Responce, raw []byte) {
-	infoLogger.Info("event(no handler)",
-		slog.Any("type", r.Payload.Subscription.Type),
-	)
-}
-
-func handleNotificationChannelChatMessage(_ *Config, r *Responce, raw []byte) {
-	v := &ResponceChatMessage{}
-	err := json.Unmarshal(raw, &v)
-	if err != nil {
-		logger.Error("Unmarshal", "error", err, "raw", string(raw))
-	}
-	e := &v.Payload.Event
-	infoLogger.Info("event(ChatMsg)",
-		slog.Any("type", r.Payload.Subscription.Type),
-		slog.Any("user", e.ChatterUserLogin),
-		slog.Any("name", e.ChatterUserName),
-		slog.Any("text", e.Message.Text),
-	)
-}
-
-func handleNotificationChannelChatNotification(_ *Config, r *Responce, raw []byte) {
-	v := &ResponceChannelChatNotification{}
-	err := json.Unmarshal(raw, &v)
-	if err != nil {
-		logger.Error("Unmarshal", "error", err, "raw", string(raw))
-	}
-	e := &v.Payload.Event
-	switch e.NoticeType {
-	case "raid":
-		infoLogger.Info("event(Raid)",
-			slog.Any("type", r.Payload.Subscription.Type),
-			slog.Any("from", e.RaId.UserName),
-			slog.Any("viewers", e.RaId.ViewerCount),
-		)
-	case "sub":
-	case "resub":
-	case "sub_gift":
-	case "community_sub_gift":
-	case "gift_paid_upgrade":
-	case "prime_paid_upgrade":
-	case "unraid":
-	case "pay_it_forward":
-	case "announcement":
-	case "bits_badge_tier":
-	case "charity_donation":
-	default:
-		logger.Error("event(NotParsed)", "raw", string(raw))
-	}
-}
-
-func handleNotificationChannelSubscribe(_ *Config, r *Responce, raw []byte) {
-	v := &ResponceChannelSubscribe{}
-	err := json.Unmarshal(raw, &v)
-	if err != nil {
-		logger.Error("Unmarshal", "error", err, "raw", string(raw))
-	}
-	e := &v.Payload.Event
-	if v.Payload.Event.IsGift {
-		infoLogger.Info("event(Subscribed<Gift>)",
-			slog.Any("type", r.Payload.Subscription.Type),
-			slog.Any("user", e.UserName),
-			slog.Any("tear", e.Tier),
-			slog.Any("gift", e.IsGift),
-		)
-	} else {
-		infoLogger.Info("event(Subscribed)",
-			slog.Any("type", r.Payload.Subscription.Type),
-			slog.Any("user", e.UserName),
-			slog.Any("tear", e.Tier),
-			slog.Any("gift", e.IsGift),
-		)
-	}
-}
-
-func handleNotificationChannelSubscriptionMessage(_ *Config, r *Responce, raw []byte) {
-	v := &ResponceChannelSubscriptionMessage{}
-	err := json.Unmarshal(raw, &v)
-	if err != nil {
-		logger.Error("Unmarshal", "error", err, "raw", string(raw))
-	}
-	e := &v.Payload.Event
-	infoLogger.Info("event(ReSubscribed)",
-		slog.Any("type", r.Payload.Subscription.Type),
-		slog.Any("user", e.UserName),
-		slog.Any("tear", e.Tier),
-		slog.Any("duration", e.DurationMonths),
-		slog.Any("streak", e.StreakMonths),
-		slog.Any("cumlative", e.CumulativeMonths),
-	)
-}
-
-func handleNotificationChannelCheer(_ *Config, r *Responce, raw []byte) {
-	v := &ResponceChannelCheer{}
-	err := json.Unmarshal(raw, &v)
-	if err != nil {
-		logger.Error("Unmarshal", "error", err, "raw", string(raw))
-	}
-	e := &v.Payload.Event
-	infoLogger.Info("event(Cheer)",
-		slog.Any("type", r.Payload.Subscription.Type),
-		slog.Any("user", e.UserName),
-		slog.Any("anonymous", e.IsAnonymous),
-		slog.Any("bits", e.Bits),
-		slog.Any("msg", e.Message),
-	)
-}
-
-func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte) {
-	path := buildLogPath()
-	_, infoLogger = buildLogger(cfg, path, *Debug)
-
-	v := &ResponceStreamOnline{}
-	err := json.Unmarshal(raw, &v)
-	if err != nil {
-		logger.Error("Unmarshal", "error", err, "raw", string(raw))
-	}
-	e := &v.Payload.Event
-	infoLogger.Info("event(Online)",
-		slog.Any("type", r.Payload.Subscription.Type),
-		slog.Any("user", e.BroadcasterUserName),
-		slog.Any("at", e.StartedAt),
-	)
-}
-
-func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte) {
-	v := &ResponceStreamOffline{}
-	err := json.Unmarshal(raw, &v)
-	if err != nil {
-		logger.Error("Unmarshal", "error", err, "raw", string(raw))
-	}
-	e := &v.Payload.Event
-	infoLogger.Info("event(Offline)",
-		slog.Any("type", r.Payload.Subscription.Type),
-		slog.Any("user", e.BroadcasterUserName),
-	)
-}
-
-func handleNotificationChannelPointsCustomRewardRedemptionAdd(_ *Config, r *Responce, raw []byte) {
-	v := &ResponceChannelPointsCustomRewardRedemptionAdd{}
-	err := json.Unmarshal(raw, &v)
-	if err != nil {
-		logger.Error("Unmarshal", "error", err, "raw", string(raw))
-	}
-	e := &v.Payload.Event
-	infoLogger.Info("event(Channel Points)",
-		slog.Any("type", r.Payload.Subscription.Type),
-		slog.Any("user", e.UserLogin),
-		slog.Any("name", e.UserName),
-		slog.Any("title", e.Reward.Title),
-	)
-}
-
 func handleNotification(cfg *Config, r *Responce, raw []byte) {
 	logger.Info("ReceiveNotification", "type", r.Payload.Subscription.Type)
-	if e, exists := SubscribeHandlerList[r.Payload.Subscription.Type]; exists {
+	if e, exists := TwitchEventTable[r.Payload.Subscription.Type]; exists {
 		e.Handler(cfg, r, raw)
 	} else {
 		logger.Error("UNKNOWN notification", "Type", r.Payload.Subscription.Type)

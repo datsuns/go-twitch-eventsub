@@ -1,4 +1,4 @@
-SRC := main.go format.go config.go request.go log.go
+SRC := main.go format.go config.go request.go log.go table.go
 
 test:
 	go run $(SRC) -test

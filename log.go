@@ -8,21 +8,6 @@ import (
 	"slices"
 )
 
-var (
-	TypeToTitle = map[string]string{
-		"channel.subscribe":            "サブスク",
-		"channel.cheer":                "cheer",
-		"stream.online":                "配信開始",
-		"stream.offline":               "配信終了",
-		"channel.subscription.gift":    "サブギフ",
-		"channel.subscription.message": "サブスクmsg",
-		"channel.channel_points_custom_reward_redemption.add": "チャネポ",
-		"channel.chat.notification":                           "通知",
-		"channel.chat.message":                                "チャット",
-		"channel.follow":                                      "フォロー",
-	}
-)
-
 type TwitchInfoLogger struct {
 	slog.Handler
 	w io.Writer
@@ -63,33 +48,29 @@ func loggable(cfg *Config, fields *map[string]any) bool {
 }
 
 func (t *TwitchInfoLogger) Handle(c context.Context, r slog.Record) error {
-	split := "   "
 	fields := make(map[string]any, r.NumAttrs())
 	r.Attrs(func(a slog.Attr) bool {
 		addLogFields(fields, a)
 		return true
 	})
+	typeField := fields[LogFieldName_Type]
 
 	if loggable(t.c, &fields) == false {
 		return nil
 	}
 
-	if fields["type"] == nil {
+	if typeField == nil {
 		t.w.Write([]byte(fmt.Sprintf("%v\n", fields)))
 		return nil
 	}
 	log := r.Time.Format("2006/01/02 15:04:05 ")
-	pattern := fmt.Sprintf("%v", fields["type"])
-	if s, exists := TypeToTitle[pattern]; exists {
-		log += s + split
-	} else {
-		log += fmt.Sprintf("%v%v", pattern, split)
-	}
+	pattern := fmt.Sprintf("%v", typeField)
+	log += typeToChatTitle(pattern)
 	for k, v := range fields {
-		if k == "type" {
+		if k == LogFieldName_Type {
 			continue
 		}
-		log += fmt.Sprintf("%v:%v%v", k, v, split)
+		log += fmt.Sprintf("%v:%v%v", k, v, logSplit)
 	}
 	log += "\n"
 	t.w.Write([]byte(log))

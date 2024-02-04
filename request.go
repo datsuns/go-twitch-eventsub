@@ -42,7 +42,7 @@ func issueEventSubRequest(cfg *Config, method, url string, body io.Reader) ([]by
 	return byteArray, nil
 }
 
-func createEventSubscription(cfg *Config, r *Responce, event string, e *EventSubHandlerEntry) error {
+func createEventSubscription(cfg *Config, r *Responce, event string, e *EventTableEntry) error {
 	bin := e.Builder(cfg, r, event, e.Version)
 	logger.Info("create EventSub", "SessionID", r.Payload.Session.Id, "User", cfg.TargetUserId, "Type", event, "Raw", string(bin))
 	_, err := issueEventSubRequest(cfg, "POST", "https://api.twitch.tv/helix/eventsub/subscriptions", bytes.NewReader(bin))
