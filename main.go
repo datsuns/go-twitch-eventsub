@@ -15,7 +15,7 @@ import (
 )
 
 type RequestBuilder func(*Config, *Responce, string, string) []byte
-type SessionHandler func(*Responce, []byte)
+type SessionHandler func(*Config, *Responce, []byte)
 type EventSubHandlerEntry struct {
 	Version string
 	Builder RequestBuilder
@@ -206,13 +206,13 @@ func handleSessionWelcome(cfg *Config, r *Responce, raw []byte) {
 	}
 }
 
-func handleNotificationDefault(r *Responce, raw []byte) {
+func handleNotificationDefault(_ *Config, r *Responce, raw []byte) {
 	infoLogger.Info("event(no handler)",
 		slog.Any("type", r.Payload.Subscription.Type),
 	)
 }
 
-func handleNotificationChannelChatMessage(r *Responce, raw []byte) {
+func handleNotificationChannelChatMessage(_ *Config, r *Responce, raw []byte) {
 	v := &ResponceChatMessage{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -227,7 +227,7 @@ func handleNotificationChannelChatMessage(r *Responce, raw []byte) {
 	)
 }
 
-func handleNotificationChannelChatNotification(r *Responce, raw []byte) {
+func handleNotificationChannelChatNotification(_ *Config, r *Responce, raw []byte) {
 	v := &ResponceChannelChatNotification{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -257,7 +257,7 @@ func handleNotificationChannelChatNotification(r *Responce, raw []byte) {
 	}
 }
 
-func handleNotificationChannelSubscribe(r *Responce, raw []byte) {
+func handleNotificationChannelSubscribe(_ *Config, r *Responce, raw []byte) {
 	v := &ResponceChannelSubscribe{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -281,7 +281,7 @@ func handleNotificationChannelSubscribe(r *Responce, raw []byte) {
 	}
 }
 
-func handleNotificationChannelSubscriptionMessage(r *Responce, raw []byte) {
+func handleNotificationChannelSubscriptionMessage(_ *Config, r *Responce, raw []byte) {
 	v := &ResponceChannelSubscriptionMessage{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -298,7 +298,7 @@ func handleNotificationChannelSubscriptionMessage(r *Responce, raw []byte) {
 	)
 }
 
-func handleNotificationChannelCheer(r *Responce, raw []byte) {
+func handleNotificationChannelCheer(_ *Config, r *Responce, raw []byte) {
 	v := &ResponceChannelCheer{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -314,9 +314,9 @@ func handleNotificationChannelCheer(r *Responce, raw []byte) {
 	)
 }
 
-func handleNotificationStreamOnline(r *Responce, raw []byte) {
+func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte) {
 	path := buildLogPath()
-	_, infoLogger = buildLogger(path, *Debug)
+	_, infoLogger = buildLogger(cfg, path, *Debug)
 
 	v := &ResponceStreamOnline{}
 	err := json.Unmarshal(raw, &v)
@@ -331,7 +331,7 @@ func handleNotificationStreamOnline(r *Responce, raw []byte) {
 	)
 }
 
-func handleNotificationStreamOffline(r *Responce, raw []byte) {
+func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte) {
 	v := &ResponceStreamOffline{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -344,7 +344,7 @@ func handleNotificationStreamOffline(r *Responce, raw []byte) {
 	)
 }
 
-func handleNotificationChannelPointsCustomRewardRedemptionAdd(r *Responce, raw []byte) {
+func handleNotificationChannelPointsCustomRewardRedemptionAdd(_ *Config, r *Responce, raw []byte) {
 	v := &ResponceChannelPointsCustomRewardRedemptionAdd{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -362,7 +362,7 @@ func handleNotificationChannelPointsCustomRewardRedemptionAdd(r *Responce, raw [
 func handleNotification(cfg *Config, r *Responce, raw []byte) {
 	logger.Info("ReceiveNotification", "type", r.Payload.Subscription.Type)
 	if e, exists := SubscribeHandlerList[r.Payload.Subscription.Type]; exists {
-		e.Handler(r, raw)
+		e.Handler(cfg, r, raw)
 	} else {
 		logger.Error("UNKNOWN notification", "Type", r.Payload.Subscription.Type)
 	}
@@ -401,27 +401,27 @@ func buildLogPath() string {
 	return fmt.Sprintf("%v.txt", n.Format("20060102"))
 }
 
-func buildLogger(logPath string, debug bool) (*slog.Logger, *slog.Logger) {
+func buildLogger(c *Config, logPath string, debug bool) (*slog.Logger, *slog.Logger) {
 	log, _ := os.OpenFile(logPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0666)
 	runlog, _ := os.OpenFile("debug.txt", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0666)
 	return slog.New(
 		slogmulti.Fanout(
 			slog.NewTextHandler(os.Stdout, nil),
 			slog.NewTextHandler(runlog, nil),
-			NewTwitchInfoLogger(os.Stdout),
+			NewTwitchInfoLogger(c, os.Stdout),
 		),
-	), slog.New(NewTwitchInfoLogger(log))
+	), slog.New(NewTwitchInfoLogger(c, log))
 
 }
 
 func main() {
 	flag.Parse()
 	path := buildLogPath()
-	logger, infoLogger = buildLogger(path, *Debug)
 	cfg, err := loadConfig()
 	if err != nil {
 		panic(nil)
 	}
+	logger, infoLogger = buildLogger(cfg, path, *Debug)
 	cfg.TargetUserId = referTargetUserId(cfg)
 
 	interrupt := make(chan os.Signal, 1)

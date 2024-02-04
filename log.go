@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"slices"
 )
 
 var (
@@ -25,12 +26,14 @@ var (
 type TwitchInfoLogger struct {
 	slog.Handler
 	w io.Writer
+	c *Config
 }
 
-func NewTwitchInfoLogger(w io.Writer) *TwitchInfoLogger {
+func NewTwitchInfoLogger(c *Config, w io.Writer) *TwitchInfoLogger {
 	return &TwitchInfoLogger{
 		Handler: slog.NewTextHandler(w, nil),
 		w:       w,
+		c:       c,
 	}
 }
 
@@ -50,6 +53,15 @@ func addLogFields(fields map[string]any, a slog.Attr) {
 	fields[a.Key] = innerFields
 }
 
+func loggable(cfg *Config, fields *map[string]any) bool {
+	t := fmt.Sprintf("%v", (*fields)["type"])
+	if t == "channel.chat.message" {
+		u := fmt.Sprintf("%v", (*fields)["user"])
+		return slices.Contains(cfg.ChatTargets, u)
+	}
+	return true
+}
+
 func (t *TwitchInfoLogger) Handle(c context.Context, r slog.Record) error {
 	split := "   "
 	fields := make(map[string]any, r.NumAttrs())
@@ -57,6 +69,11 @@ func (t *TwitchInfoLogger) Handle(c context.Context, r slog.Record) error {
 		addLogFields(fields, a)
 		return true
 	})
+
+	if loggable(t.c, &fields) == false {
+		return nil
+	}
+
 	if fields["type"] == nil {
 		t.w.Write([]byte(fmt.Sprintf("%v\n", fields)))
 		return nil

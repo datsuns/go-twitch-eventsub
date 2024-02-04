@@ -7,17 +7,29 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	configFilePath = "config.yaml"
+)
+
 type Config struct {
-	TargetUser   string `yaml:"SUBSCRIBE_USER"`
-	AuthCode     string `yaml:"AUTH_CODE"`
-	ClientId     string `yaml:"CLIENT_ID"`
+	TargetUser   string   `yaml:"SUBSCRIBE_USER"`
+	AuthCode     string   `yaml:"AUTH_CODE"`
+	ClientId     string   `yaml:"CLIENT_ID"`
+	ChatTargets  []string `yaml:"CHART_TARGETS"`
 	TargetUserId string
+}
+
+func loadConfigFrom(raw []byte) (*Config, error) {
+	ret := &Config{}
+	if e := yaml.Unmarshal(raw, ret); e != nil {
+		return nil, e
+	}
+	return ret, nil
 }
 
 func loadConfig() (*Config, error) {
 	var e error
-	ret := &Config{}
-	f, e := os.Open("config.yaml")
+	f, e := os.Open(configFilePath)
 	if e != nil {
 		return nil, e
 	}
@@ -25,8 +37,5 @@ func loadConfig() (*Config, error) {
 	if e != nil {
 		return nil, e
 	}
-	if e = yaml.Unmarshal(b, ret); e != nil {
-		return nil, e
-	}
-	return ret, nil
+	return loadConfigFrom(b)
 }
