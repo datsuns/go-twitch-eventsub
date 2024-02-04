@@ -320,6 +320,26 @@ type ResponceChannelSubscribe struct {
 }
 
 // --------------------------------------------------------
+type EventFormatChannelSubscriptionGift struct {
+	*EventFormatCommon
+	Total           int    `json:"total"`
+	Tier            string `json:"tier"`
+	CumulativeTotal int    `json:"cumulative_total"`
+	IsAnonymous     bool   `json:"is_anonymous"`
+}
+
+type PayloadFormatChannelSubscriptionGift struct {
+	Session      SessionFormat                      `json:"session"`
+	Subscription SubscriptionFormat                 `json:"subscription"`
+	Event        EventFormatChannelSubscriptionGift `json:"event"`
+}
+
+type ResponceChannelSubscriptionGift struct {
+	Metadata MetadataFormat                       `json:"metadata"`
+	Payload  PayloadFormatChannelSubscriptionGift `json:"payload"`
+}
+
+// --------------------------------------------------------
 type EventFormatChannelSubscriptionMessage struct {
 	*EventFormatCommon
 	Tier    string `json:"tier"`

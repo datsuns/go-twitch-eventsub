@@ -23,8 +23,8 @@ var (
 		"channel.cheer":                {"cheer", "1", buildRequest, handleNotificationChannelCheer},    // bits:read
 		"stream.online":                {"配信開始", "1", buildRequest, handleNotificationStreamOnline},
 		"stream.offline":               {"配信終了", "1", buildRequest, handleNotificationStreamOffline},
-		"channel.subscription.gift":    {"サブギフ", "1", buildRequest, handleNotificationDefault},                       // channel:read:subscriptions
-		"channel.subscription.message": {"サブスクms", "1", buildRequest, handleNotificationChannelSubscriptionMessage},  // channel:read:subscriptionsg",
+		"channel.subscription.gift":    {"サブギフ", "1", buildRequest, handleNotificationChannelSubscriptionGift},       // channel:read:subscriptions
+		"channel.subscription.message": {"サブスクmsg", "1", buildRequest, handleNotificationChannelSubscriptionMessage}, // channel:read:subscriptionsg",
 		"channel.chat.notification":    {"通知", "1", buildRequestWithUser, handleNotificationChannelChatNotification}, // user:read:chat
 		"channel.chat.message":         {"チャット", "1", buildRequestWithUser, handleNotificationChannelChatMessage},    // user:read:chat
 		"channel.follow":               {"フォロー", "2", buildRequestWithModerator, handleNotificationDefault},          // moderator:read:followers
@@ -172,6 +172,22 @@ func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte) {
 	)
 }
 
+func handleNotificationChannelSubscriptionGift(_ *Config, r *Responce, raw []byte) {
+	v := &ResponceChannelSubscriptionGift{}
+	err := json.Unmarshal(raw, &v)
+	if err != nil {
+		logger.Error("Unmarshal", "error", err, "raw", string(raw))
+	}
+	e := &v.Payload.Event
+	infoLogger.Info("event(Gift)",
+		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
+		slog.Any(LogFieldName_UserName, e.UserName),
+		slog.Any("tear", e.Tier),
+		slog.Any("total", e.CumulativeTotal),
+		slog.Any("anonymous", e.IsAnonymous),
+	)
+}
+
 func handleNotificationChannelSubscriptionMessage(_ *Config, r *Responce, raw []byte) {
 	v := &ResponceChannelSubscriptionMessage{}
 	err := json.Unmarshal(raw, &v)
@@ -215,6 +231,7 @@ func handleNotificationChannelChatNotification(_ *Config, r *Responce, raw []byt
 	case "raid":
 		infoLogger.Info("event(Raid)",
 			slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
+			slog.Any("category", "レイド"),
 			slog.Any("from", e.RaId.UserName),
 			slog.Any("viewers", e.RaId.ViewerCount),
 		)

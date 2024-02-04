@@ -1,9 +1,12 @@
 SRC := main.go format.go config.go request.go log.go table.go
 
 test:
+	go test -v
+
+local:
 	go run $(SRC) -test
 
-testd:
+locald:
 	go run $(SRC) -test -debug
 
 run:
