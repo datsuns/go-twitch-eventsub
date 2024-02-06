@@ -27,7 +27,7 @@ var (
 		"channel.subscription.message": {"サブスクmsg", "1", buildRequest, handleNotificationChannelSubscriptionMessage}, // channel:read:subscriptionsg",
 		"channel.chat.notification":    {"通知", "1", buildRequestWithUser, handleNotificationChannelChatNotification}, // user:read:chat
 		"channel.chat.message":         {"チャット", "1", buildRequestWithUser, handleNotificationChannelChatMessage},    // user:read:chat
-		"channel.follow":               {"フォロー", "2", buildRequestWithModerator, handleNotificationDefault},          // moderator:read:followers
+		"channel.follow":               {"フォロー", "2", buildRequestWithModerator, handleNotificationChannelFollow},    // moderator:read:followers
 		"channel.channel_points_custom_reward_redemption.add": {"チャネポ", "1", buildRequest, handleNotificationChannelPointsCustomRewardRedemptionAdd}, // channel:read:redemptions
 	}
 )
@@ -263,5 +263,18 @@ func handleNotificationChannelChatMessage(_ *Config, r *Responce, raw []byte) {
 		slog.Any(LogFieldName_UserName, e.ChatterUserName),
 		slog.Any("login", e.ChatterUserLogin),
 		slog.Any("text", e.Message.Text),
+	)
+}
+
+func handleNotificationChannelFollow(_ *Config, r *Responce, raw []byte) {
+	v := &ResponceChannelFollow{}
+	err := json.Unmarshal(raw, &v)
+	if err != nil {
+		logger.Error("Unmarshal", "error", err, "raw", string(raw))
+	}
+	e := &v.Payload.Event
+	infoLogger.Info("event(Channel Follow)",
+		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
+		slog.Any(LogFieldName_UserName, e.UserName),
 	)
 }

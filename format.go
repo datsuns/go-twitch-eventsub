@@ -450,3 +450,20 @@ type ResponceChannelPointsCustomRewardRedemptionAdd struct {
 	Metadata MetadataFormat                                      `json:"metadata"`
 	Payload  PayloadFormatChannelPointsCustomRewardRedemptionAdd `json:"payload"`
 }
+
+// --------------------------------------------------------
+type EventFormatChannelFollow struct {
+	*EventFormatCommon
+	FollowedAt string `json:"followed_at"`
+}
+
+type PayloadFormatChannelFollow struct {
+	Session      SessionFormat            `json:"session"`
+	Subscription SubscriptionFormat       `json:"subscription"`
+	Event        EventFormatChannelFollow `json:"event"`
+}
+
+type ResponceChannelFollow struct {
+	Metadata MetadataFormat             `json:"metadata"`
+	Payload  PayloadFormatChannelFollow `json:"payload"`
+}
