@@ -276,5 +276,6 @@ func handleNotificationChannelFollow(_ *Config, r *Responce, raw []byte) {
 	infoLogger.Info("event(Channel Follow)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 		slog.Any(LogFieldName_UserName, e.UserName),
+		slog.Any(LogFieldName_LoginName, e.UserLogin),
 	)
 }
