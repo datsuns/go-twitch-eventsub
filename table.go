@@ -261,7 +261,7 @@ func handleNotificationChannelChatMessage(_ *Config, r *Responce, raw []byte) {
 	infoLogger.Info("event(ChatMsg)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 		slog.Any(LogFieldName_UserName, e.ChatterUserName),
-		slog.Any("login", e.ChatterUserLogin),
+		slog.Any(LogFieldName_LoginName, e.ChatterUserLogin),
 		slog.Any("text", e.Message.Text),
 	)
 }

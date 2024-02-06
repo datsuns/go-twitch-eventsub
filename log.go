@@ -41,7 +41,7 @@ func addLogFields(fields map[string]any, a slog.Attr) {
 func loggable(cfg *Config, fields *map[string]any) bool {
 	t := fmt.Sprintf("%v", (*fields)[LogFieldName_Type])
 	if t == "channel.chat.message" {
-		u := fmt.Sprintf("%v", (*fields)["user"])
+		u := fmt.Sprintf("%v", (*fields)[LogFieldName_LoginName])
 		return slices.Contains(cfg.ChatTargets, u)
 	}
 	return true

@@ -15,10 +15,11 @@ import (
 )
 
 const (
-	LocalTestAddr         = "127.0.0.1:8080"
-	LocalTestScheme       = "ws"
-	LogFieldName_Type     = "type"
-	LogFieldName_UserName = "user"
+	LocalTestAddr          = "127.0.0.1:8080"
+	LocalTestScheme        = "ws"
+	LogFieldName_Type      = "type"
+	LogFieldName_UserName  = "user"
+	LogFieldName_LoginName = "login"
 )
 
 var (
