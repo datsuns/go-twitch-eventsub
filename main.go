@@ -79,7 +79,7 @@ func receive(conn *websocket.Conn) (*Responce, []byte, error) {
 }
 
 // https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#subscription-types
-func handleSessionWelcome(cfg *Config, r *Responce, raw []byte) {
+func handleSessionWelcome(cfg *Config, r *Responce, raw []byte, _ *TwitchStats) {
 	if *Test {
 		return
 	}
@@ -91,16 +91,16 @@ func handleSessionWelcome(cfg *Config, r *Responce, raw []byte) {
 	}
 }
 
-func handleNotification(cfg *Config, r *Responce, raw []byte) {
+func handleNotification(cfg *Config, r *Responce, raw []byte, stats *TwitchStats) {
 	logger.Info("ReceiveNotification", "type", r.Payload.Subscription.Type)
 	if e, exists := TwitchEventTable[r.Payload.Subscription.Type]; exists {
-		e.Handler(cfg, r, raw)
+		e.Handler(cfg, r, raw, stats)
 	} else {
 		logger.Error("UNKNOWN notification", "Type", r.Payload.Subscription.Type)
 	}
 }
 
-func progress(done *chan struct{}, cfg *Config, conn *websocket.Conn) {
+func progress(done *chan struct{}, cfg *Config, conn *websocket.Conn, stats *TwitchStats) {
 	for {
 		r, raw, err := receive(conn)
 		if err != nil {
@@ -110,14 +110,14 @@ func progress(done *chan struct{}, cfg *Config, conn *websocket.Conn) {
 		switch r.Metadata.MessageType {
 		case "session_welcome":
 			logger.Info("event: connected")
-			handleSessionWelcome(cfg, r, raw)
+			handleSessionWelcome(cfg, r, raw, stats)
 		case "session_keepalive":
 			//logger.Info("event: keepalive")
 		case "session_reconnect":
 			logger.Info("event: reconnect")
 		case "notification":
 			logger.Info("event: notification")
-			handleNotification(cfg, r, raw)
+			handleNotification(cfg, r, raw, stats)
 		case "revocation":
 			logger.Info("event: revocation")
 		default:
@@ -167,7 +167,7 @@ func main() {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		progress(&done, cfg, c)
+		progress(&done, cfg, c, stats)
 	}()
 
 	ticker := time.NewTicker(time.Second)

@@ -7,7 +7,7 @@ import (
 )
 
 type CreateRequestBuilder func(*Config, *Responce, string, string) []byte
-type NotificationHandler func(*Config, *Responce, []byte)
+type NotificationHandler func(*Config, *Responce, []byte, *TwitchStats)
 
 type EventTableEntry struct {
 	LogTitle string
@@ -96,13 +96,13 @@ func buildRequestWithUser(cfg *Config, r *Responce, subscType, version string) [
 	return bin
 }
 
-func handleNotificationDefault(_ *Config, r *Responce, raw []byte) {
+func handleNotificationDefault(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
 	infoLogger.Info("event(no handler)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 	)
 }
 
-func handleNotificationChannelSubscribe(_ *Config, r *Responce, raw []byte) {
+func handleNotificationChannelSubscribe(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
 	v := &ResponceChannelSubscribe{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -126,7 +126,7 @@ func handleNotificationChannelSubscribe(_ *Config, r *Responce, raw []byte) {
 	}
 }
 
-func handleNotificationChannelCheer(_ *Config, r *Responce, raw []byte) {
+func handleNotificationChannelCheer(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
 	v := &ResponceChannelCheer{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -142,7 +142,7 @@ func handleNotificationChannelCheer(_ *Config, r *Responce, raw []byte) {
 	)
 }
 
-func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte) {
+func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte, _ *TwitchStats) {
 	path := buildLogPath()
 	_, infoLogger = buildLogger(cfg, path, *Debug)
 
@@ -159,7 +159,7 @@ func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte) {
 	)
 }
 
-func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte) {
+func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
 	v := &ResponceStreamOffline{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -172,7 +172,7 @@ func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte) {
 	)
 }
 
-func handleNotificationChannelSubscriptionGift(_ *Config, r *Responce, raw []byte) {
+func handleNotificationChannelSubscriptionGift(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
 	v := &ResponceChannelSubscriptionGift{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -188,7 +188,7 @@ func handleNotificationChannelSubscriptionGift(_ *Config, r *Responce, raw []byt
 	)
 }
 
-func handleNotificationChannelSubscriptionMessage(_ *Config, r *Responce, raw []byte) {
+func handleNotificationChannelSubscriptionMessage(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
 	v := &ResponceChannelSubscriptionMessage{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -205,7 +205,7 @@ func handleNotificationChannelSubscriptionMessage(_ *Config, r *Responce, raw []
 	)
 }
 
-func handleNotificationChannelPointsCustomRewardRedemptionAdd(_ *Config, r *Responce, raw []byte) {
+func handleNotificationChannelPointsCustomRewardRedemptionAdd(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
 	v := &ResponceChannelPointsCustomRewardRedemptionAdd{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -220,7 +220,7 @@ func handleNotificationChannelPointsCustomRewardRedemptionAdd(_ *Config, r *Resp
 	)
 }
 
-func handleNotificationChannelChatNotification(_ *Config, r *Responce, raw []byte) {
+func handleNotificationChannelChatNotification(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
 	v := &ResponceChannelChatNotification{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -251,7 +251,7 @@ func handleNotificationChannelChatNotification(_ *Config, r *Responce, raw []byt
 	}
 }
 
-func handleNotificationChannelChatMessage(_ *Config, r *Responce, raw []byte) {
+func handleNotificationChannelChatMessage(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
 	v := &ResponceChatMessage{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -266,7 +266,7 @@ func handleNotificationChannelChatMessage(_ *Config, r *Responce, raw []byte) {
 	)
 }
 
-func handleNotificationChannelFollow(_ *Config, r *Responce, raw []byte) {
+func handleNotificationChannelFollow(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
 	v := &ResponceChannelFollow{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
