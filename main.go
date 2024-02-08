@@ -35,6 +35,8 @@ var (
 	path      = "/ws"
 	query     = "keepalive_timeout_seconds=30"
 	keepalive = flag.String("keepalive", "30", "keepalive timeout")
+
+	stats *TwitchStats
 )
 
 func buildQuery() string {
@@ -153,6 +155,8 @@ func main() {
 	}
 	logger, infoLogger = buildLogger(cfg, path, *Debug)
 	cfg.TargetUserId = referTargetUserId(cfg)
+
+	stats = NewTwitchStats()
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
