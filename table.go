@@ -142,7 +142,7 @@ func handleNotificationChannelCheer(_ *Config, r *Responce, raw []byte, _ *Twitc
 	)
 }
 
-func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte, _ *TwitchStats) {
+func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte, stats *TwitchStats) {
 	path := buildLogPath()
 	_, infoLogger = buildLogger(cfg, path, *Debug)
 
@@ -157,6 +157,7 @@ func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte, _ *Twi
 		slog.Any(LogFieldName_UserName, e.BroadcasterUserName),
 		slog.Any("at", e.StartedAt),
 	)
+	stats.Clear()
 }
 
 func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {

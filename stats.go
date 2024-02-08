@@ -1,13 +1,21 @@
 package main
 
-import "time"
+import (
+	"io"
+	"time"
+)
 
-type TwitchViewer struct {
-	Time *time.Time
-	Name string
+type PeriodStats struct {
+	Started  *time.Time
+	Finished *time.Time
 }
 
-type TwitchChannelPoint struct {
+type ViewerStats struct {
+	Time  time.Time
+	Total int
+}
+
+type ChannelPointStats struct {
 	TotalTimes int
 	Entry      []struct {
 		Name  string
@@ -16,15 +24,27 @@ type TwitchChannelPoint struct {
 }
 
 type TwitchStats struct {
+	Period         PeriodStats
 	NumOfChats     int
-	ViewersHistory []TwitchViewer
-	ChannelPoinsts []TwitchChannelPoint
+	ViewersHistory []ViewerStats
+	ChannelPoinsts []ChannelPointStats
 }
 
 func NewTwitchStats() *TwitchStats {
-	return &TwitchStats{
-		NumOfChats:     0,
-		ViewersHistory: []TwitchViewer{},
-		ChannelPoinsts: []TwitchChannelPoint{},
-	}
+	ret := &TwitchStats{}
+	ret.Clear()
+	return ret
+}
+
+func (t *TwitchStats) Clear() {
+	t.NumOfChats = 0
+	t.ViewersHistory = []ViewerStats{}
+	t.ChannelPoinsts = []ChannelPointStats{}
+}
+
+func (t *TwitchStats) Dump(w io.Writer) {
+}
+
+func (t *TwitchStats) StreamStarted() {
+	t.Clear()
 }
