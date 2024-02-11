@@ -92,7 +92,7 @@ func TestTwitchStats_ChannelPoint(t *testing.T) {
 }
 
 func TestTwitchStats_ChannelCheer(t *testing.T) {
-	var h map[UserName]CheerRecord
+	var h map[UserName]BitsRecord
 	sut := NewTwitchStats()
 	sut.StreamStarted()
 

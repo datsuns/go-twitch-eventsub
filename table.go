@@ -24,7 +24,7 @@ var (
 		"stream.online":                {"配信開始", "1", buildRequest, handleNotificationStreamOnline},
 		"stream.offline":               {"配信終了", "1", buildRequest, handleNotificationStreamOffline},
 		"channel.subscription.gift":    {"サブギフ", "1", buildRequest, handleNotificationChannelSubscriptionGift},       // channel:read:subscriptions
-		"channel.subscription.message": {"サブスクmsg", "1", buildRequest, handleNotificationChannelSubscriptionMessage}, // channel:read:subscriptionsg",
+		"channel.subscription.message": {"サブスク通知", "1", buildRequest, handleNotificationChannelSubscriptionMessage},  // channel:read:subscriptionsg",
 		"channel.chat.notification":    {"通知", "1", buildRequestWithUser, handleNotificationChannelChatNotification}, // user:read:chat
 		"channel.chat.message":         {"チャット", "1", buildRequestWithUser, handleNotificationChannelChatMessage},    // user:read:chat
 		"channel.follow":               {"フォロー", "2", buildRequestWithModerator, handleNotificationChannelFollow},    // moderator:read:followers
@@ -102,7 +102,7 @@ func handleNotificationDefault(_ *Config, r *Responce, raw []byte, _ *TwitchStat
 	)
 }
 
-func handleNotificationChannelSubscribe(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
+func handleNotificationChannelSubscribe(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
 	v := &ResponceChannelSubscribe{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -124,6 +124,7 @@ func handleNotificationChannelSubscribe(_ *Config, r *Responce, raw []byte, _ *T
 			slog.Any("tear", e.Tier),
 			slog.Any("gift", e.IsGift),
 		)
+		s.SubScribe(UserName(e.UserName), e.Tier)
 	}
 }
 
@@ -162,7 +163,7 @@ func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte, stats 
 	stats.Clear()
 }
 
-func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
+func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
 	v := &ResponceStreamOffline{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -173,9 +174,13 @@ func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte, _ *Twit
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 		slog.Any(LogFieldName_UserName, e.BroadcasterUserName),
 	)
+	infoLogger.Info("stats",
+		slog.Any("stats", s.String()),
+	)
+	s.StreamFinished()
 }
 
-func handleNotificationChannelSubscriptionGift(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
+func handleNotificationChannelSubscriptionGift(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
 	v := &ResponceChannelSubscriptionGift{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -189,6 +194,8 @@ func handleNotificationChannelSubscriptionGift(_ *Config, r *Responce, raw []byt
 		slog.Any("total", e.CumulativeTotal),
 		slog.Any("anonymous", e.IsAnonymous),
 	)
+
+	s.SubGift(UserName(e.UserName), e.Total)
 }
 
 func handleNotificationChannelSubscriptionMessage(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
@@ -208,7 +215,7 @@ func handleNotificationChannelSubscriptionMessage(_ *Config, r *Responce, raw []
 	)
 }
 
-func handleNotificationChannelPointsCustomRewardRedemptionAdd(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
+func handleNotificationChannelPointsCustomRewardRedemptionAdd(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
 	v := &ResponceChannelPointsCustomRewardRedemptionAdd{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -221,9 +228,10 @@ func handleNotificationChannelPointsCustomRewardRedemptionAdd(_ *Config, r *Resp
 		slog.Any("login", e.UserLogin),
 		slog.Any("title", e.Reward.Title),
 	)
+	s.ChannelPoint(UserName(e.UserName), ChannelPointTitle(e.Reward.Title))
 }
 
-func handleNotificationChannelChatNotification(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
+func handleNotificationChannelChatNotification(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
 	v := &ResponceChannelChatNotification{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -238,6 +246,7 @@ func handleNotificationChannelChatNotification(_ *Config, r *Responce, raw []byt
 			slog.Any("from", e.RaId.UserName),
 			slog.Any("viewers", e.RaId.ViewerCount),
 		)
+		s.Raid(UserName(e.RaId.UserName), e.RaId.ViewerCount)
 	case "sub":
 	case "resub":
 		// TODO サブスク扱いにする
@@ -272,7 +281,7 @@ func handleNotificationChannelChatMessage(_ *Config, r *Responce, raw []byte, _ 
 	)
 }
 
-func handleNotificationChannelFollow(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
+func handleNotificationChannelFollow(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
 	v := &ResponceChannelFollow{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -284,4 +293,5 @@ func handleNotificationChannelFollow(_ *Config, r *Responce, raw []byte, _ *Twit
 		slog.Any(LogFieldName_UserName, e.UserName),
 		slog.Any(LogFieldName_LoginName, e.UserLogin),
 	)
+	s.Follow(UserName(e.UserName))
 }
