@@ -50,29 +50,42 @@ func TestTwitchStats_ChannelPoint(t *testing.T) {
 	sut := NewTwitchStats()
 	sut.StreamStarted()
 
+	user1 := UserName("user1")
+	user2 := UserName("user2")
 	title := ChannelPointTitle("にほんごのタイトル")
 	title2 := ChannelPointTitle("べつのタイトル")
 
-	sut.ChannelPoint("user", title)
+	sut.ChannelPoint(user1, title)
 	if sut.LoadChannelPointTotal() != 1 {
 		t.Errorf("invalid channel points total [n:%v]", sut.LoadChannelPointTotal())
 	}
-	if sut.LoadChannelPointTimes(title) != 1 {
-		t.Errorf("invalid channel points times [n:%v]", sut.LoadChannelPointTimes(title))
+	if sut.LoadChannelPointTimes(user1) != 1 {
+		t.Errorf("invalid channel points times [n:%v]", sut.LoadChannelPointTimes(user1))
 	}
-	if sut.LoadChannelPointTimes(title2) != 0 {
-		t.Errorf("invalid channel points times(2) [n:%v]", sut.LoadChannelPointTimes(title2))
+	if sut.LoadChannelPointTimes(user2) != 0 {
+		t.Errorf("invalid channel points times(2) [n:%v]", sut.LoadChannelPointTimes(user2))
 	}
 
-	sut.ChannelPoint("user", title2)
+	sut.ChannelPoint(user2, title2)
 	if sut.LoadChannelPointTotal() != 2 {
 		t.Errorf("invalid channel points total [n:%v]", sut.LoadChannelPointTotal())
 	}
-	if sut.LoadChannelPointTimes(title) != 1 {
-		t.Errorf("invalid channel points times [n:%v]", sut.LoadChannelPointTimes(title))
+	if sut.LoadChannelPointTimes(user1) != 1 {
+		t.Errorf("invalid channel points times [n:%v]", sut.LoadChannelPointTimes(user1))
 	}
-	if sut.LoadChannelPointTimes(title2) != 1 {
-		t.Errorf("invalid channel points times(2) [n:%v]", sut.LoadChannelPointTimes(title2))
+	if sut.LoadChannelPointTimes(user2) != 1 {
+		t.Errorf("invalid channel points times(2) [n:%v]", sut.LoadChannelPointTimes(user2))
+	}
+
+	sut.ChannelPoint(user2, title2)
+	if sut.LoadChannelPointTotal() != 3 {
+		t.Errorf("invalid channel points total [n:%v]", sut.LoadChannelPointTotal())
+	}
+	if sut.LoadChannelPointTimes(user1) != 1 {
+		t.Errorf("invalid channel points times [n:%v]", sut.LoadChannelPointTimes(user1))
+	}
+	if sut.LoadChannelPointTimes(user2) != 2 {
+		t.Errorf("invalid channel points times(2) [n:%v]", sut.LoadChannelPointTimes(user2))
 	}
 
 	sut.StreamFinished()

@@ -41,7 +41,7 @@ type CheerStats struct {
 
 type ChannelPointStats struct {
 	TotalTimes int
-	Record     map[ChannelPointTitle]int
+	Record     map[UserName]int
 }
 
 type TwitchStats struct {
@@ -71,7 +71,7 @@ func (t *TwitchStats) Clear() {
 	t.ViewersHistory = []ViewerStats{}
 	t.ChannelPoinsts = ChannelPointStats{
 		TotalTimes: 0,
-		Record:     map[ChannelPointTitle]int{},
+		Record:     map[UserName]int{},
 	}
 }
 
@@ -107,10 +107,10 @@ func (t *TwitchStats) ChannelPoint(user UserName, title ChannelPointTitle) {
 		return
 	}
 	t.ChannelPoinsts.TotalTimes += 1
-	if _, exists := t.ChannelPoinsts.Record[title]; exists {
-		t.ChannelPoinsts.Record[title] += 1
+	if _, exists := t.ChannelPoinsts.Record[user]; exists {
+		t.ChannelPoinsts.Record[user] += 1
 	} else {
-		t.ChannelPoinsts.Record[title] = 1
+		t.ChannelPoinsts.Record[user] = 1
 	}
 }
 
@@ -151,9 +151,9 @@ func (t *TwitchStats) LoadChannelPointTotal() int {
 	return t.ChannelPoinsts.TotalTimes
 }
 
-func (t *TwitchStats) LoadChannelPointTimes(title ChannelPointTitle) int {
-	if _, exists := t.ChannelPoinsts.Record[title]; exists {
-		return t.ChannelPoinsts.Record[title]
+func (t *TwitchStats) LoadChannelPointTimes(user UserName) int {
+	if _, exists := t.ChannelPoinsts.Record[user]; exists {
+		return t.ChannelPoinsts.Record[user]
 	} else {
 		return 0
 	}

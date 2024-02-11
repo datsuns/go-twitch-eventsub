@@ -110,12 +110,13 @@ func handleNotificationChannelSubscribe(_ *Config, r *Responce, raw []byte, _ *T
 	}
 	e := &v.Payload.Event
 	if v.Payload.Event.IsGift {
-		infoLogger.Info("event(Subscribed<Gift>)",
-			slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
-			slog.Any(LogFieldName_UserName, e.UserName),
-			slog.Any("tear", e.Tier),
-			slog.Any("gift", e.IsGift),
-		)
+		// ギフトを受け取った人の分は無理に出さなくてよい
+		//infoLogger.Info("event(Subscribed<Gift>)",
+		//	slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
+		//	slog.Any(LogFieldName_UserName, e.UserName),
+		//	slog.Any("tear", e.Tier),
+		//	slog.Any("gift", e.IsGift),
+		//)
 	} else {
 		infoLogger.Info("event(Subscribed)",
 			slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
@@ -126,7 +127,7 @@ func handleNotificationChannelSubscribe(_ *Config, r *Responce, raw []byte, _ *T
 	}
 }
 
-func handleNotificationChannelCheer(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
+func handleNotificationChannelCheer(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
 	v := &ResponceChannelCheer{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -140,6 +141,7 @@ func handleNotificationChannelCheer(_ *Config, r *Responce, raw []byte, _ *Twitc
 		slog.Any("bits", e.Bits),
 		slog.Any("msg", e.Message),
 	)
+	s.Cheer(UserName(e.UserName), e.Bits)
 }
 
 func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte, stats *TwitchStats) {
