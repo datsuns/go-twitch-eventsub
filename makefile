@@ -3,6 +3,9 @@ SRC := main.go format.go config.go request.go log.go table.go stats.go
 test:
 	go test -v
 
+autotest:
+	autocmd -v -t '.*\.go' -t 'makefile' -- make test
+
 local:
 	go run $(SRC) -test
 
