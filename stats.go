@@ -80,6 +80,7 @@ func (t *TwitchStats) String() string {
 }
 
 func (t *TwitchStats) Dump(w io.Writer) {
+	w.Write([]byte(t.String() + "\n"))
 }
 
 func (t *TwitchStats) StreamStarted() {
