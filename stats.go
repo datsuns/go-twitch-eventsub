@@ -119,6 +119,8 @@ func (t *TwitchStats) Clear() {
 
 func (t *TwitchStats) String() string {
 	raidTimes, raidTotal := t.LoadRaidResult()
+	started := t.LastPeriod.Started.Format("2006/01/02 15:04:05")
+	finished := t.LastPeriod.Finished.Format("2006/01/02 15:04:05")
 	return fmt.Sprintf(
 		"------\n"+
 			"  配信時間: %v ~ %v\n"+
@@ -127,7 +129,7 @@ func (t *TwitchStats) String() string {
 			"  新規サブスク: %v人\n"+
 			"  ビッツ: %v\n"+
 			"  レイド: %v回 (視聴者数:%v人)\n",
-		t.LastPeriod.Started, t.LastPeriod.Finished,
+		started, finished,
 		len(t.FollowStats.Users),
 		t.LoadChannelPointTotal(),
 		len(t.LoadSubScribed()),
