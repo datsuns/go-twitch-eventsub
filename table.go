@@ -145,7 +145,7 @@ func handleNotificationChannelCheer(_ *Config, r *Responce, raw []byte, s *Twitc
 	s.Cheer(UserName(e.UserName), e.Bits)
 }
 
-func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte, stats *TwitchStats) {
+func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte, s *TwitchStats) {
 	path := buildLogPath()
 	_, infoLogger = buildLogger(cfg, path, *Debug)
 
@@ -154,13 +154,13 @@ func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte, stats 
 	if err != nil {
 		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
+	s.StreamStarted()
 	e := &v.Payload.Event
 	infoLogger.Info("event(Online)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 		slog.Any(LogFieldName_UserName, e.BroadcasterUserName),
 		slog.Any("at", e.StartedAt),
 	)
-	stats.Clear()
 }
 
 func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
@@ -174,10 +174,10 @@ func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte, s *Twit
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 		slog.Any(LogFieldName_UserName, e.BroadcasterUserName),
 	)
+	s.StreamFinished()
 	infoLogger.Info("stats",
 		slog.Any("stats", s.String()),
 	)
-	s.StreamFinished()
 }
 
 func handleNotificationChannelSubscriptionGift(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
