@@ -136,14 +136,21 @@ func buildLogPath() string {
 func buildLogger(c *Config, logPath string, debug bool) (*slog.Logger, *slog.Logger) {
 	log, _ := os.OpenFile(logPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0666)
 	runlog, _ := os.OpenFile("debug.txt", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0666)
-	return slog.New(
-		slogmulti.Fanout(
-			slog.NewTextHandler(os.Stdout, nil),
-			slog.NewTextHandler(runlog, nil),
-			NewTwitchInfoLogger(c, os.Stdout),
-		),
-	), slog.New(NewTwitchInfoLogger(c, log))
-
+	if *Debug {
+		return slog.New(
+			slogmulti.Fanout(
+				slog.NewTextHandler(os.Stdout, nil),
+				slog.NewTextHandler(runlog, nil),
+				NewTwitchInfoLogger(c, os.Stdout),
+			),
+		), slog.New(NewTwitchInfoLogger(c, log))
+	} else {
+		return slog.New(
+			slogmulti.Fanout(
+				slog.NewTextHandler(runlog, nil),
+			),
+		), slog.New(NewTwitchInfoLogger(c, log))
+	}
 }
 
 func main() {
