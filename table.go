@@ -252,6 +252,7 @@ func handleNotificationChannelChatNotification(_ *Config, r *Responce, raw []byt
 		// TODO サブスク扱いにする
 		// 情報はこんな感じに来る
 		// "resub":{"cumulative_months":10,"duration_months":0,"streak_months":10,"sub_tier":"1000","is_prime":false,"is_gift":false,"gifter_is_anonymous":null,"gifter_user_id":null,"gifter_user_name":null,"gifter_user_login":null},
+		s.SubScribe(UserName(e.ChatterUserName), e.Resub.SubTier)
 	case "sub_gift":
 	case "community_sub_gift":
 	case "gift_paid_upgrade":
