@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"slices"
 )
 
 type TwitchInfoLogger struct {
@@ -39,12 +38,14 @@ func addLogFields(fields map[string]any, a slog.Attr) {
 }
 
 func loggable(cfg *Config, fields *map[string]any) bool {
-	t := fmt.Sprintf("%v", (*fields)[LogFieldName_Type])
-	if t == "channel.chat.message" {
-		u := fmt.Sprintf("%v", (*fields)[LogFieldName_LoginName])
-		return slices.Contains(cfg.ChatTargets, u)
-	}
+	// いったんチャットフィルタはなくした
 	return true
+	//t := fmt.Sprintf("%v", (*fields)[LogFieldName_Type])
+	//if t == "channel.chat.message" {
+	//	u := fmt.Sprintf("%v", (*fields)[LogFieldName_LoginName])
+	//	return slices.Contains(cfg.ChatTargets, u)
+	//}
+	//return true
 }
 
 func (t *TwitchInfoLogger) Handle(c context.Context, r slog.Record) error {
