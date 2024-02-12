@@ -130,7 +130,15 @@ func (t *TwitchStats) String() string {
 	}
 	chanepoResult := fmt.Sprintf("  チャネポ総回数: %v\n", t.LoadChannelPointTotal())
 	for name, times := range t.LoadChannelPointHistory() {
-		chanepoResult += fmt.Sprintf("    %v: %v回\n", name, times)
+		chanepoResult += fmt.Sprintf("    - %v: %v回\n", name, times)
+	}
+	subscResult := fmt.Sprintf("  新規サブスク: %v人\n", len(t.LoadSubScribed()))
+	for name := range t.LoadSubscriptonHistory() {
+		subscResult += fmt.Sprintf("    - %v\n", name)
+	}
+	cheerResult := fmt.Sprintf("  ビッツ: %v\n", t.LoadCheerTotal())
+	for name, bitsRecord := range t.LoadCheerHistory() {
+		cheerResult += fmt.Sprintf("    - %v (%v ビッツ)\n", name, bitsRecord.Bits)
 	}
 	raidResult := fmt.Sprintf("  レイド: %v回\n", raidTimes)
 	for _, e := range t.LoadRaidHistory() {
@@ -141,14 +149,14 @@ func (t *TwitchStats) String() string {
 			"  配信時間: %v ~ %v\n"+
 			"%v"+
 			"%v"+
-			"  新規サブスク: %v人\n"+
-			"  ビッツ: %v\n"+
+			"%v"+
+			"%v"+
 			"%v",
 		started, finished,
 		followResult,
 		chanepoResult,
-		len(t.LoadSubScribed()),
-		t.LoadCheerTotal(),
+		subscResult,
+		cheerResult,
 		raidResult,
 	)
 }
@@ -281,6 +289,10 @@ func (t *TwitchStats) LoadChannelPointTimes(user UserName) int {
 	} else {
 		return 0
 	}
+}
+
+func (t *TwitchStats) LoadSubscriptonHistory() map[UserName]SubScriptionEntry {
+	return t.SubScriptionStats.Entry
 }
 
 func (t *TwitchStats) LoadRaidResult() (int, int) {
