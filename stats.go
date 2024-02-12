@@ -71,9 +71,6 @@ type RaidStats struct {
 	History []RaidEntry
 }
 
-// TODO ビッツ: 誰が投げたか？
-// TODO サブスク: 誰が？
-// TODO チャット: 残すは残す(最後のstatsを充実させる)
 type TwitchStats struct {
 	InStreaming       bool
 	LastPeriod        PeriodStats
