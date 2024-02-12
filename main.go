@@ -23,11 +23,11 @@ const (
 )
 
 var (
-	Debug      = flag.Bool("debug", false, "debug mode")
-	Test       = flag.Bool("test", false, "local test mode")
-	logger     *slog.Logger
-	infoLogger *slog.Logger
-	logSplit   = "   "
+	Debug       = flag.Bool("debug", false, "debug mode")
+	Test        = flag.Bool("test", false, "local test mode")
+	logger      *slog.Logger
+	statsLogger *slog.Logger
+	logSplit    = "   "
 
 	scheme = "wss"
 	addr   = flag.String("addr", "eventsub.wss.twitch.tv", "http service address")
@@ -160,7 +160,7 @@ func main() {
 	if err != nil {
 		panic(nil)
 	}
-	logger, infoLogger = buildLogger(cfg, path, *Debug)
+	logger, statsLogger = buildLogger(cfg, path, *Debug)
 	cfg.TargetUserId = referTargetUserId(cfg)
 
 	stats = NewTwitchStats()

@@ -97,7 +97,7 @@ func buildRequestWithUser(cfg *Config, r *Responce, subscType, version string) [
 }
 
 func handleNotificationDefault(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
-	infoLogger.Info("event(no handler)",
+	statsLogger.Info("event(no handler)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 	)
 }
@@ -118,7 +118,7 @@ func handleNotificationChannelSubscribe(_ *Config, r *Responce, raw []byte, s *T
 		//	slog.Any("gift", e.IsGift),
 		//)
 	} else {
-		infoLogger.Info("event(Subscribed)",
+		statsLogger.Info("event(Subscribed)",
 			slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 			slog.Any(LogFieldName_UserName, e.UserName),
 			slog.Any("tear", e.Tier),
@@ -135,7 +135,7 @@ func handleNotificationChannelCheer(_ *Config, r *Responce, raw []byte, s *Twitc
 		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
-	infoLogger.Info("event(Cheer)",
+	statsLogger.Info("event(Cheer)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 		slog.Any(LogFieldName_UserName, e.UserName),
 		slog.Any("anonymous", e.IsAnonymous),
@@ -147,7 +147,7 @@ func handleNotificationChannelCheer(_ *Config, r *Responce, raw []byte, s *Twitc
 
 func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte, s *TwitchStats) {
 	path := buildLogPath()
-	_, infoLogger = buildLogger(cfg, path, *Debug)
+	_, statsLogger = buildLogger(cfg, path, *Debug)
 
 	v := &ResponceStreamOnline{}
 	err := json.Unmarshal(raw, &v)
@@ -156,7 +156,7 @@ func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte, s *Twi
 	}
 	s.StreamStarted()
 	e := &v.Payload.Event
-	infoLogger.Info("event(Online)",
+	statsLogger.Info("event(Online)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 		slog.Any(LogFieldName_UserName, e.BroadcasterUserName),
 		slog.Any("at", e.StartedAt),
@@ -170,12 +170,12 @@ func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte, s *Twit
 		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
-	infoLogger.Info("event(Offline)",
+	statsLogger.Info("event(Offline)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 		slog.Any(LogFieldName_UserName, e.BroadcasterUserName),
 	)
 	s.StreamFinished()
-	infoLogger.Info("stats",
+	statsLogger.Info("stats",
 		slog.Any("stats", s.String()),
 	)
 }
@@ -187,7 +187,7 @@ func handleNotificationChannelSubscriptionGift(_ *Config, r *Responce, raw []byt
 		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
-	infoLogger.Info("event(Gift)",
+	statsLogger.Info("event(Gift)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 		slog.Any(LogFieldName_UserName, e.UserName),
 		slog.Any("tear", e.Tier),
@@ -205,7 +205,7 @@ func handleNotificationChannelSubscriptionMessage(_ *Config, r *Responce, raw []
 		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
-	infoLogger.Info("event(ReSubscribed)",
+	statsLogger.Info("event(ReSubscribed)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 		slog.Any(LogFieldName_UserName, e.UserName),
 		slog.Any("tear", e.Tier),
@@ -222,7 +222,7 @@ func handleNotificationChannelPointsCustomRewardRedemptionAdd(_ *Config, r *Resp
 		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
-	infoLogger.Info("event(Channel Points)",
+	statsLogger.Info("event(Channel Points)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 		slog.Any(LogFieldName_UserName, e.UserName),
 		slog.Any("login", e.UserLogin),
@@ -240,7 +240,7 @@ func handleNotificationChannelChatNotification(_ *Config, r *Responce, raw []byt
 	e := &v.Payload.Event
 	switch e.NoticeType {
 	case "raid":
-		infoLogger.Info("event(Raid)",
+		statsLogger.Info("event(Raid)",
 			slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 			slog.Any("category", "レイド"),
 			slog.Any("from", e.RaId.UserName),
@@ -274,7 +274,7 @@ func handleNotificationChannelChatMessage(_ *Config, r *Responce, raw []byte, _ 
 		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
-	infoLogger.Info("event(ChatMsg)",
+	statsLogger.Info("event(ChatMsg)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 		slog.Any(LogFieldName_UserName, e.ChatterUserName),
 		slog.Any(LogFieldName_LoginName, e.ChatterUserLogin),
@@ -289,7 +289,7 @@ func handleNotificationChannelFollow(_ *Config, r *Responce, raw []byte, s *Twit
 		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
 	e := &v.Payload.Event
-	infoLogger.Info("event(Channel Follow)",
+	statsLogger.Info("event(Channel Follow)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 		slog.Any(LogFieldName_UserName, e.UserName),
 		slog.Any(LogFieldName_LoginName, e.UserLogin),
