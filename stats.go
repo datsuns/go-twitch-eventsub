@@ -121,17 +121,21 @@ func (t *TwitchStats) String() string {
 	raidTimes, raidTotal := t.LoadRaidResult()
 	started := t.LastPeriod.Started.Format("2006/01/02 15:04:05")
 	finished := t.LastPeriod.Finished.Format("2006/01/02 15:04:05")
+	chanepoResult := fmt.Sprintf("  チャネポ総回数: %v\n", t.LoadChannelPointTotal())
+	for name, times := range t.LoadChannelPointHistory() {
+		chanepoResult += fmt.Sprintf("    %v: %v回\n", name, times)
+	}
 	return fmt.Sprintf(
 		"------\n"+
 			"  配信時間: %v ~ %v\n"+
 			"  新規フォロー: %v人\n"+
-			"  チャネポ回数: %v\n"+
+			"%v"+
 			"  新規サブスク: %v人\n"+
 			"  ビッツ: %v\n"+
 			"  レイド: %v回 (視聴者数:%v人)\n",
 		started, finished,
 		len(t.FollowStats.Users),
-		t.LoadChannelPointTotal(),
+		chanepoResult,
 		len(t.LoadSubScribed()),
 		t.LoadCheerTotal(),
 		raidTimes, raidTotal,
@@ -254,6 +258,10 @@ func (t *TwitchStats) LoadSubScribed() map[UserName]SubScriptionEntry {
 
 func (t *TwitchStats) LoadChannelPointTotal() int {
 	return t.ChannelPoinsts.TotalTimes
+}
+
+func (t *TwitchStats) LoadChannelPointHistory() map[UserName]int {
+	return t.ChannelPoinsts.Record
 }
 
 func (t *TwitchStats) LoadChannelPointTimes(user UserName) int {
