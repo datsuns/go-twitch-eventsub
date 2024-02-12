@@ -71,6 +71,9 @@ type RaidStats struct {
 	History []RaidEntry
 }
 
+// TODO ビッツ: 誰が投げたか？
+// TODO サブスク: 誰が？
+// TODO チャット: 残すは残す(最後のstatsを充実させる)
 type TwitchStats struct {
 	InStreaming       bool
 	LastPeriod        PeriodStats
@@ -118,27 +121,35 @@ func (t *TwitchStats) Clear() {
 }
 
 func (t *TwitchStats) String() string {
-	raidTimes, raidTotal := t.LoadRaidResult()
+	raidTimes, _ := t.LoadRaidResult()
 	started := t.LastPeriod.Started.Format("2006/01/02 15:04:05")
 	finished := t.LastPeriod.Finished.Format("2006/01/02 15:04:05")
+	followResult := fmt.Sprintf("  新規フォロー: %v人\n", len(t.FollowStats.Users))
+	for _, u := range t.FollowStats.Users {
+		followResult += fmt.Sprintf("    - %v\n", u)
+	}
 	chanepoResult := fmt.Sprintf("  チャネポ総回数: %v\n", t.LoadChannelPointTotal())
 	for name, times := range t.LoadChannelPointHistory() {
 		chanepoResult += fmt.Sprintf("    %v: %v回\n", name, times)
 	}
+	raidResult := fmt.Sprintf("  レイド: %v回\n", raidTimes)
+	for _, e := range t.LoadRaidHistory() {
+		raidResult += fmt.Sprintf("    - %v\n", e.From)
+	}
 	return fmt.Sprintf(
 		"------\n"+
 			"  配信時間: %v ~ %v\n"+
-			"  新規フォロー: %v人\n"+
+			"%v"+
 			"%v"+
 			"  新規サブスク: %v人\n"+
 			"  ビッツ: %v\n"+
-			"  レイド: %v回 (視聴者数:%v人)\n",
+			"%v",
 		started, finished,
-		len(t.FollowStats.Users),
+		followResult,
 		chanepoResult,
 		len(t.LoadSubScribed()),
 		t.LoadCheerTotal(),
-		raidTimes, raidTotal,
+		raidResult,
 	)
 }
 
@@ -279,4 +290,8 @@ func (t *TwitchStats) LoadRaidResult() (int, int) {
 		total += e.Viewers
 	}
 	return times, total
+}
+
+func (t *TwitchStats) LoadRaidHistory() []RaidEntry {
+	return t.RaidStats.History
 }
