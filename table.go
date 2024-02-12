@@ -32,7 +32,7 @@ var (
 	}
 )
 
-func typeToChatTitle(t string) string {
+func typeToLogTitle(t string) string {
 	if s, exists := TwitchEventTable[t]; exists {
 		return s.LogTitle + logSplit
 	} else {

@@ -55,17 +55,17 @@ func (t *TwitchInfoLogger) Handle(c context.Context, r slog.Record) error {
 	})
 	typeField := fields[LogFieldName_Type]
 
-	if loggable(t.c, &fields) == false {
-		return nil
-	}
-
 	if typeField == nil {
 		t.w.Write([]byte(fmt.Sprintf("%v\n", fields)))
 		return nil
 	}
+
+	if loggable(t.c, &fields) == false {
+		return nil
+	}
 	log := r.Time.Format("2006/01/02 15:04:05 ")
 	pattern := fmt.Sprintf("%v", typeField)
-	log += typeToChatTitle(pattern)
+	log += typeToLogTitle(pattern)
 	for k, v := range fields {
 		if k == LogFieldName_Type {
 			continue
