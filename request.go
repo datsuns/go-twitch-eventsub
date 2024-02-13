@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 )
 
 func issueEventSubRequest(cfg *Config, method, url string, body io.Reader) ([]byte, error) {
@@ -49,8 +50,8 @@ func createEventSubscription(cfg *Config, r *Responce, event string, e *EventTab
 	return err
 }
 
-func referTargetUserId(cfg *Config) string {
-	url := fmt.Sprintf("https://api.twitch.tv/helix/users?login=%v", cfg.TargetUser)
+func referTargetUserIdWith(cfg *Config, username string) string {
+	url := fmt.Sprintf("https://api.twitch.tv/helix/users?login=%v", username)
 	ret, err := issueEventSubRequest(cfg, "GET", url, nil)
 	if err != nil {
 		logger.Error("Eventsub Request", "ERROR", err.Error())
@@ -61,5 +62,30 @@ func referTargetUserId(cfg *Config) string {
 		logger.Error("json.Unmarshal", "ERR", err.Error())
 	}
 	logger.Info("SubscribeTarget", "id", r.Data[0].Id, "name", r.Data[0].DisplayName)
+	return r.Data[0].Id
+}
+
+func referTargetUserId(cfg *Config) string {
+	return referTargetUserIdWith(cfg, cfg.TargetUser)
+}
+
+func referUserClips(cfg *Config, userName, userId string) string {
+	maxN := 5
+	url := fmt.Sprintf("https://api.twitch.tv/helix/clips?broadcaster_id=%v&is_featured=true&first=%v", userId, maxN)
+	ret, err := issueEventSubRequest(cfg, "GET", url, nil)
+	if err != nil {
+		logger.Error("Eventsub Request", "ERROR", err.Error())
+	}
+	r := &GetClipsApiResponce{}
+	err = json.Unmarshal(ret, &r)
+	if err != nil {
+		logger.Error("json.Unmarshal", "ERR", err.Error())
+	}
+	log, _ := os.OpenFile(cfg.RaidLogPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0666)
+	fmt.Fprintf(log, "-- %v さんのクリップ -- \n", userName)
+	for _, v := range r.Data {
+		//infoLogger.Info("UserClip", slog.Any("タイトル", v.Title), slog.Any("URL", v.Url), slog.Any("視聴回数", v.ViewCount))
+		fmt.Fprintf(log, "   再生回数[%v] / タイトル[%v] / URL[ %v ]\n", v.ViewCount, v.Title, v.Url)
+	}
 	return r.Data[0].Id
 }

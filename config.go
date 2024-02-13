@@ -17,6 +17,7 @@ type Config struct {
 	ClientId     string   `yaml:"CLIENT_ID"`
 	ChatTargets  []string `yaml:"CHART_TARGETS"`
 	TargetUserId string
+	RaidLogPath  string
 }
 
 func loadConfigFrom(raw []byte) (*Config, error) {
@@ -24,6 +25,7 @@ func loadConfigFrom(raw []byte) (*Config, error) {
 	if e := yaml.Unmarshal(raw, ret); e != nil {
 		return nil, e
 	}
+	ret.RaidLogPath = RaidLogPath
 	return ret, nil
 }
 

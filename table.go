@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 )
 
 type CreateRequestBuilder func(*Config, *Responce, string, string) []byte
@@ -147,7 +148,7 @@ func handleNotificationChannelCheer(_ *Config, r *Responce, raw []byte, s *Twitc
 
 func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte, s *TwitchStats) {
 	path := buildLogPath()
-	_, statsLogger = buildLogger(cfg, path, *Debug)
+	_, statsLogger, infoLogger = buildLogger(cfg, path, *Debug)
 
 	v := &ResponceStreamOnline{}
 	err := json.Unmarshal(raw, &v)
@@ -161,6 +162,7 @@ func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte, s *Twi
 		slog.Any(LogFieldName_UserName, e.BroadcasterUserName),
 		slog.Any("at", e.StartedAt),
 	)
+	os.Remove(cfg.RaidLogPath)
 }
 
 func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
@@ -231,7 +233,7 @@ func handleNotificationChannelPointsCustomRewardRedemptionAdd(_ *Config, r *Resp
 	s.ChannelPoint(UserName(e.UserName), ChannelPointTitle(e.Reward.Title))
 }
 
-func handleNotificationChannelChatNotification(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
+func handleNotificationChannelChatNotification(cfg *Config, r *Responce, raw []byte, s *TwitchStats) {
 	v := &ResponceChannelChatNotification{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -247,6 +249,7 @@ func handleNotificationChannelChatNotification(_ *Config, r *Responce, raw []byt
 			slog.Any("viewers", e.RaId.ViewerCount),
 		)
 		s.Raid(UserName(e.RaId.UserName), e.RaId.ViewerCount)
+		referUserClips(cfg, e.RaId.UserName, e.RaId.UserId)
 	case "sub":
 	case "resub":
 		// TODO サブスク扱いにする

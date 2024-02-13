@@ -25,7 +25,9 @@ const (
 var (
 	Debug       = flag.Bool("debug", false, "debug mode")
 	Test        = flag.Bool("test", false, "local test mode")
+	RaidLogPath = "レイド.txt"
 	logger      *slog.Logger
+	infoLogger  *slog.Logger
 	statsLogger *slog.Logger
 	logSplit    = "   "
 
@@ -133,23 +135,27 @@ func buildLogPath() string {
 	return fmt.Sprintf("%v.txt", n.Format("20060102"))
 }
 
-func buildLogger(c *Config, logPath string, debug bool) (*slog.Logger, *slog.Logger) {
+func buildLogger(c *Config, logPath string, debug bool) (*slog.Logger, *slog.Logger, *slog.Logger) {
 	log, _ := os.OpenFile(logPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0666)
 	runlog, _ := os.OpenFile("debug.txt", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0666)
 	if *Debug {
 		return slog.New(
-			slogmulti.Fanout(
-				slog.NewTextHandler(os.Stdout, nil),
-				slog.NewTextHandler(runlog, nil),
-				NewTwitchInfoLogger(c, os.Stdout),
+				slogmulti.Fanout(
+					slog.NewTextHandler(os.Stdout, nil),
+					slog.NewTextHandler(runlog, nil),
+					NewTwitchInfoLogger(c, os.Stdout),
+				),
 			),
-		), slog.New(NewTwitchInfoLogger(c, log))
+			slog.New(NewTwitchInfoLogger(c, log)),
+			slog.New(NewTwitchInfoLogger(c, os.Stdout))
 	} else {
 		return slog.New(
-			slogmulti.Fanout(
-				slog.NewTextHandler(runlog, nil),
+				slogmulti.Fanout(
+					slog.NewTextHandler(runlog, nil),
+				),
 			),
-		), slog.New(NewTwitchInfoLogger(c, log))
+			slog.New(NewTwitchInfoLogger(c, log)),
+			slog.New(NewTwitchInfoLogger(c, os.Stdout))
 	}
 }
 
@@ -160,7 +166,7 @@ func main() {
 	if err != nil {
 		panic(nil)
 	}
-	logger, statsLogger = buildLogger(cfg, path, *Debug)
+	logger, statsLogger, infoLogger = buildLogger(cfg, path, *Debug)
 	cfg.TargetUserId = referTargetUserId(cfg)
 
 	stats = NewTwitchStats()
