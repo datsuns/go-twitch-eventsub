@@ -95,13 +95,17 @@ func handleSessionWelcome(cfg *Config, r *Responce, raw []byte, _ *TwitchStats) 
 	}
 }
 
-func handleNotification(cfg *Config, r *Responce, raw []byte, stats *TwitchStats) {
+func handleNotification(cfg *Config, r *Responce, raw []byte, stats *TwitchStats) bool {
 	logger.Info("ReceiveNotification", "type", r.Payload.Subscription.Type)
 	if e, exists := TwitchEventTable[r.Payload.Subscription.Type]; exists {
 		e.Handler(cfg, r, raw, stats)
 	} else {
 		logger.Error("UNKNOWN notification", "Type", r.Payload.Subscription.Type)
 	}
+	if r.Payload.Subscription.Type == "stream.offline" {
+		return false
+	}
+	return true
 }
 
 func progress(done *chan struct{}, cfg *Config, conn *websocket.Conn, stats *TwitchStats) {
@@ -121,7 +125,9 @@ func progress(done *chan struct{}, cfg *Config, conn *websocket.Conn, stats *Twi
 			logger.Info("event: reconnect")
 		case "notification":
 			logger.Info("event: notification")
-			handleNotification(cfg, r, raw, stats)
+			if handleNotification(cfg, r, raw, stats) == false {
+				return
+			}
 		case "revocation":
 			logger.Info("event: revocation")
 		default:
