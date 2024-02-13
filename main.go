@@ -1,3 +1,4 @@
+// TODO statsは個別のファイルにだす
 package main
 
 import (
