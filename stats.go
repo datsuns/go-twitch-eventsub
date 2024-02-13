@@ -142,7 +142,7 @@ func (t *TwitchStats) String() string {
 		raidResult += fmt.Sprintf("    - %v\n", e.From)
 	}
 	return fmt.Sprintf(
-		"------\n"+
+		"------------------------------------------------------------n"+
 			"  配信時間: %v ~ %v\n"+
 			"%v"+
 			"%v"+

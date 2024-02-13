@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 )
 
 func issueEventSubRequest(cfg *Config, method, url string, body io.Reader) ([]byte, error) {
@@ -72,20 +71,21 @@ func referTargetUserId(cfg *Config) string {
 func referUserClips(cfg *Config, userName, userId string) string {
 	maxN := 5
 	url := fmt.Sprintf("https://api.twitch.tv/helix/clips?broadcaster_id=%v&is_featured=true&first=%v", userId, maxN)
-	ret, err := issueEventSubRequest(cfg, "GET", url, nil)
+	raw, err := issueEventSubRequest(cfg, "GET", url, nil)
 	if err != nil {
 		logger.Error("Eventsub Request", "ERROR", err.Error())
+		return ""
 	}
 	r := &GetClipsApiResponce{}
-	err = json.Unmarshal(ret, &r)
+	err = json.Unmarshal(raw, &r)
 	if err != nil {
 		logger.Error("json.Unmarshal", "ERR", err.Error())
+		return ""
 	}
-	log, _ := os.OpenFile(cfg.RaidLogPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0666)
-	fmt.Fprintf(log, "-- %v さんのクリップ -- \n", userName)
+	ret := fmt.Sprintf("-- %v さんのクリップ -- \n", userName)
 	for _, v := range r.Data {
 		//infoLogger.Info("UserClip", slog.Any("タイトル", v.Title), slog.Any("URL", v.Url), slog.Any("視聴回数", v.ViewCount))
-		fmt.Fprintf(log, "   再生回数[%v] / タイトル[%v] / URL[ %v ]\n", v.ViewCount, v.Title, v.Url)
+		ret += fmt.Sprintf("   再生回数[%v] / タイトル[%v] / URL[ %v ]\n", v.ViewCount, v.Title, v.Url)
 	}
-	return r.Data[0].Id
+	return ret
 }

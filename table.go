@@ -165,7 +165,7 @@ func handleNotificationStreamOnline(cfg *Config, r *Responce, raw []byte, s *Twi
 	os.Remove(cfg.RaidLogPath)
 }
 
-func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
+func handleNotificationStreamOffline(cfg *Config, r *Responce, raw []byte, s *TwitchStats) {
 	v := &ResponceStreamOffline{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -177,9 +177,9 @@ func handleNotificationStreamOffline(_ *Config, r *Responce, raw []byte, s *Twit
 		slog.Any(LogFieldName_UserName, e.BroadcasterUserName),
 	)
 	s.StreamFinished()
-	statsLogger.Info("stats",
-		slog.Any("stats", s.String()),
-	)
+	log, _ := os.OpenFile(cfg.StatsLogPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0666)
+	defer log.Close()
+	fmt.Fprintf(log, s.String())
 }
 
 func handleNotificationChannelSubscriptionGift(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
@@ -233,6 +233,20 @@ func handleNotificationChannelPointsCustomRewardRedemptionAdd(_ *Config, r *Resp
 	s.ChannelPoint(UserName(e.UserName), ChannelPointTitle(e.Reward.Title))
 }
 
+func handleNotificationChannelChatNotificationRaid(cfg *Config, r *Responce, e *EventFormatChannelChatNotification, s *TwitchStats) {
+	statsLogger.Info("event(Raid)",
+		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
+		slog.Any("category", "レイド"),
+		slog.Any("from", e.RaId.UserName),
+		slog.Any("viewers", e.RaId.ViewerCount),
+	)
+	s.Raid(UserName(e.RaId.UserName), e.RaId.ViewerCount)
+	clips := referUserClips(cfg, e.RaId.UserName, e.RaId.UserId)
+	log, _ := os.OpenFile(cfg.RaidLogPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0666)
+	defer log.Close()
+	fmt.Fprintf(log, clips)
+}
+
 func handleNotificationChannelChatNotification(cfg *Config, r *Responce, raw []byte, s *TwitchStats) {
 	v := &ResponceChannelChatNotification{}
 	err := json.Unmarshal(raw, &v)
@@ -242,14 +256,7 @@ func handleNotificationChannelChatNotification(cfg *Config, r *Responce, raw []b
 	e := &v.Payload.Event
 	switch e.NoticeType {
 	case "raid":
-		statsLogger.Info("event(Raid)",
-			slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
-			slog.Any("category", "レイド"),
-			slog.Any("from", e.RaId.UserName),
-			slog.Any("viewers", e.RaId.ViewerCount),
-		)
-		s.Raid(UserName(e.RaId.UserName), e.RaId.ViewerCount)
-		referUserClips(cfg, e.RaId.UserName, e.RaId.UserId)
+		handleNotificationChannelChatNotificationRaid(cfg, r, e, s)
 	case "sub":
 	case "resub":
 		// TODO サブスク扱いにする

@@ -1,4 +1,3 @@
-// TODO statsは個別のファイルにだす
 package main
 
 import (
@@ -24,9 +23,11 @@ const (
 )
 
 var (
-	Debug       = flag.Bool("debug", false, "debug mode")
-	Test        = flag.Bool("test", false, "local test mode")
-	RaidLogPath = "レイド.txt"
+	Debug        = flag.Bool("debug", false, "debug mode")
+	Test         = flag.Bool("test", false, "local test mode")
+	StatsLogPath = "配信履歴.txt"
+	RaidLogPath  = "レイド.txt"
+
 	logger      *slog.Logger
 	infoLogger  *slog.Logger
 	statsLogger *slog.Logger
