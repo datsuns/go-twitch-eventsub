@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
 func issueEventSubRequest(cfg *Config, method, url string, body io.Reader) ([]byte, error) {
@@ -68,24 +69,32 @@ func referTargetUserId(cfg *Config) string {
 	return referTargetUserIdWith(cfg, cfg.TargetUser)
 }
 
-func referUserClips(cfg *Config, userName, userId string) string {
+func referUserClips(cfg *Config, userId string) string {
+	retString, _ := referUserClipsByDate(cfg, userId, true, nil)
+	return retString
+}
+
+func referUserClipsByDate(cfg *Config, userId string, featured bool, date *time.Time) (string, *GetClipsApiResponce) {
 	maxN := 5
-	url := fmt.Sprintf("https://api.twitch.tv/helix/clips?broadcaster_id=%v&is_featured=true&first=%v", userId, maxN)
+	url := fmt.Sprintf("https://api.twitch.tv/helix/clips?broadcaster_id=%v&is_featured=%v&first=%v", userId, featured, maxN)
+	if date != nil {
+		url += fmt.Sprintf("&started_at=%v", date.UTC().Format(time.RFC3339))
+	}
 	raw, err := issueEventSubRequest(cfg, "GET", url, nil)
 	if err != nil {
 		logger.Error("Eventsub Request", "ERROR", err.Error())
-		return ""
+		return "", nil
 	}
 	r := &GetClipsApiResponce{}
 	err = json.Unmarshal(raw, &r)
 	if err != nil {
 		logger.Error("json.Unmarshal", "ERR", err.Error())
-		return ""
+		return "", nil
 	}
-	ret := fmt.Sprintf("-- %v さんのクリップ -- \n", userName)
+	ret := ""
 	for _, v := range r.Data {
 		//infoLogger.Info("UserClip", slog.Any("タイトル", v.Title), slog.Any("URL", v.Url), slog.Any("視聴回数", v.ViewCount))
 		ret += fmt.Sprintf("   再生回数[%v] / タイトル[%v] / URL[ %v ]\n", v.ViewCount, v.Title, v.Url)
 	}
-	return ret
+	return ret, r
 }

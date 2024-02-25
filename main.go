@@ -190,6 +190,7 @@ func main() {
 		defer close(done)
 		progress(&done, cfg, c, stats)
 	}()
+	StartWatcher(cfg, done)
 
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()

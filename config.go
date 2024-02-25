@@ -8,21 +8,23 @@ import (
 )
 
 const (
-	configFilePath = "config.yaml"
+	configFilePath     = "config.yaml"
+	notifySoundDefault = "C:\\Windows\\Media\\chimes.wav"
 )
 
 type Config struct {
-	TargetUser   string   `yaml:"SUBSCRIBE_USER"`
-	AuthCode     string   `yaml:"AUTH_CODE"`
-	ClientId     string   `yaml:"CLIENT_ID"`
-	ChatTargets  []string `yaml:"CHART_TARGETS"`
-	TargetUserId string
-	StatsLogPath string
-	RaidLogPath  string
+	TargetUser      string   `yaml:"SUBSCRIBE_USER"`
+	AuthCode        string   `yaml:"AUTH_CODE"`
+	ClientId        string   `yaml:"CLIENT_ID"`
+	ChatTargets     []string `yaml:"CHART_TARGETS"`
+	TargetUserId    string
+	StatsLogPath    string
+	RaidLogPath     string
+	NotifySoundFile string `yaml:"NOTIFY_SOUND"`
 }
 
 func loadConfigFrom(raw []byte) (*Config, error) {
-	ret := &Config{}
+	ret := &Config{NotifySoundFile: notifySoundDefault}
 	if e := yaml.Unmarshal(raw, ret); e != nil {
 		return nil, e
 	}
