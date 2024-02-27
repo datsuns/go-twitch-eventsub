@@ -24,12 +24,14 @@ type Config struct {
 	ObsUrl                     string `yaml:"OBS_URL"`
 	ObsPass                    string `yaml:"OBS_PASS"`
 	DelayMinutesFromRaidToStop int    `yaml:"DELAY_TO_STOP"`
+	NewClipWatchIntervalSecond int    `yaml:"NEW_CLIP_INTERVAL"`
 }
 
 func loadConfigFrom(raw []byte) (*Config, error) {
 	ret := &Config{
 		NotifySoundFile:            notifySoundDefault,
 		DelayMinutesFromRaidToStop: 3,
+		NewClipWatchIntervalSecond: 60,
 	}
 	if e := yaml.Unmarshal(raw, ret); e != nil {
 		return nil, e

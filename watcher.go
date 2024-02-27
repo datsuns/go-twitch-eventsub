@@ -16,10 +16,6 @@ import (
 	"github.com/gopxl/beep/wav"
 )
 
-const (
-	WatcherInterval = 60
-)
-
 func playSound(path string) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -70,7 +66,7 @@ func showNotification(user, url, at string) {
 
 func StartWatcher(cfg *Config, done chan struct{}) {
 	go func() {
-		ticker := time.NewTicker(time.Second * WatcherInterval)
+		ticker := time.NewTicker(time.Second * time.Duration(cfg.NewClipWatchIntervalSecond))
 		defer ticker.Stop()
 		//byDate := time.Date(2024, 2, 1, 9, 0, 0, 0, time.Local)
 		byDate := time.Now()
