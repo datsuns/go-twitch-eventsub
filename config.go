@@ -13,18 +13,24 @@ const (
 )
 
 type Config struct {
-	TargetUser      string   `yaml:"SUBSCRIBE_USER"`
-	AuthCode        string   `yaml:"AUTH_CODE"`
-	ClientId        string   `yaml:"CLIENT_ID"`
-	ChatTargets     []string `yaml:"CHART_TARGETS"`
-	TargetUserId    string
-	StatsLogPath    string
-	RaidLogPath     string
-	NotifySoundFile string `yaml:"NOTIFY_SOUND"`
+	TargetUser                 string   `yaml:"SUBSCRIBE_USER"`
+	AuthCode                   string   `yaml:"AUTH_CODE"`
+	ClientId                   string   `yaml:"CLIENT_ID"`
+	ChatTargets                []string `yaml:"CHART_TARGETS"`
+	TargetUserId               string
+	StatsLogPath               string
+	RaidLogPath                string
+	NotifySoundFile            string `yaml:"NOTIFY_SOUND"`
+	ObsUrl                     string `yaml:"OBS_URL"`
+	ObsPass                    string `yaml:"OBS_PASS"`
+	DelayMinutesFromRaidToStop int    `yaml:"DELAY_TO_STOP"`
 }
 
 func loadConfigFrom(raw []byte) (*Config, error) {
-	ret := &Config{NotifySoundFile: notifySoundDefault}
+	ret := &Config{
+		NotifySoundFile:            notifySoundDefault,
+		DelayMinutesFromRaidToStop: 3,
+	}
 	if e := yaml.Unmarshal(raw, ret); e != nil {
 		return nil, e
 	}

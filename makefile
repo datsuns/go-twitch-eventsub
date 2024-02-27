@@ -1,4 +1,4 @@
-SRC := main.go format.go config.go request.go log.go table.go stats.go watcher.go
+SRC := main.go format.go config.go request.go log.go table.go stats.go watcher.go obs.go
 
 test:
 	go test -v

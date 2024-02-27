@@ -16,6 +16,10 @@ type RequestConditionWithUser struct {
 	UserId            string `json:"user_id"`
 }
 
+type RequestConditionWithFromUser struct {
+	FromBroadcasterUserId string `json:"from_broadcaster_user_id"`
+}
+
 type SubscriptionTransport struct {
 	Method    string `json:"method"`
 	Callback  string `json:"callback"`
@@ -42,6 +46,13 @@ type CreateSubscriptionBodyWithUser struct {
 	Version   string                   `json:"version"`
 	Condition RequestConditionWithUser `json:"condition"`
 	Transport SubscriptionTransport    `json:"transport"`
+}
+
+type CreateSubscriptionBodyWithFromUser struct {
+	Type      string                       `json:"type"`
+	Version   string                       `json:"version"`
+	Condition RequestConditionWithFromUser `json:"condition"`
+	Transport SubscriptionTransport        `json:"transport"`
 }
 
 // --- responce

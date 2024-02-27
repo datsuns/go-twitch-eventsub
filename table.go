@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 )
 
 type CreateRequestBuilder func(*Config, *Responce, string, string) []byte
@@ -28,6 +29,7 @@ var (
 		"channel.subscription.message": {"サブスク通知", "1", buildRequest, handleNotificationChannelSubscriptionMessage},  // channel:read:subscriptionsg",
 		"channel.chat.notification":    {"通知", "1", buildRequestWithUser, handleNotificationChannelChatNotification}, // user:read:chat
 		"channel.chat.message":         {"チャット", "1", buildRequestWithUser, handleNotificationChannelChatMessage},    // user:read:chat
+		"channel.raid":                 {"レイド開始", "1", buildRequestWithWithFromUser, handleNotificationRaidStarted},  // none
 		"channel.follow":               {"フォロー", "2", buildRequestWithModerator, handleNotificationChannelFollow},    // moderator:read:followers
 		"channel.channel_points_custom_reward_redemption.add": {"チャネポ", "1", buildRequest, handleNotificationChannelPointsCustomRewardRedemptionAdd}, // channel:read:redemptions
 	}
@@ -88,6 +90,24 @@ func buildRequestWithUser(cfg *Config, r *Responce, subscType, version string) [
 		SessionId: r.Payload.Session.Id,
 	}
 	body := CreateSubscriptionBodyWithUser{
+		Type:      subscType,
+		Version:   version,
+		Condition: c,
+		Transport: t,
+	}
+	bin, _ := json.Marshal(&body)
+	return bin
+}
+
+func buildRequestWithWithFromUser(cfg *Config, r *Responce, subscType, version string) []byte {
+	c := RequestConditionWithFromUser{
+		FromBroadcasterUserId: cfg.TargetUserId,
+	}
+	t := SubscriptionTransport{
+		Method:    "websocket",
+		SessionId: r.Payload.Session.Id,
+	}
+	body := CreateSubscriptionBodyWithFromUser{
 		Type:      subscType,
 		Version:   version,
 		Condition: c,
@@ -306,4 +326,18 @@ func handleNotificationChannelFollow(_ *Config, r *Responce, raw []byte, s *Twit
 		slog.Any(LogFieldName_LoginName, e.UserLogin),
 	)
 	s.Follow(UserName(e.UserName))
+}
+
+func handleNotificationRaidStarted(cfg *Config, r *Responce, raw []byte, _ *TwitchStats) {
+	statsLogger.Info("event(Raid Started)",
+		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
+	)
+	go func() {
+		logger.Info("StopStream Start")
+		ticker := time.NewTicker(time.Minute * time.Duration(cfg.DelayMinutesFromRaidToStop))
+		<-ticker.C
+		StopObsStream(cfg)
+		logger.Info("StopStream End")
+		return
+	}()
 }

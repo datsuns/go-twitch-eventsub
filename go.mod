@@ -11,9 +11,13 @@ require (
 )
 
 require (
+	github.com/andreykaipov/goobs v1.2.2 // indirect
+	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/ebitengine/oto/v3 v3.1.0 // indirect
 	github.com/ebitengine/purego v0.5.0 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
+	github.com/hashicorp/logutils v1.0.0 // indirect
+	github.com/mmcloughlin/profile v0.1.1 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/samber/lo v1.38.1 // indirect
