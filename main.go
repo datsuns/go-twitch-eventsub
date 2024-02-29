@@ -15,6 +15,8 @@ import (
 )
 
 const (
+	ToolVersion = "1.0"
+
 	LocalTestAddr          = "127.0.0.1:8080"
 	LocalTestScheme        = "ws"
 	LogFieldName_Type      = "type"
@@ -172,10 +174,11 @@ func main() {
 	path := buildLogPath()
 	cfg, err := loadConfig()
 	if err != nil {
-		panic(nil)
+		panic(err)
 	}
 	logger, statsLogger, infoLogger = buildLogger(cfg, path, *Debug)
 	cfg.TargetUserId = referTargetUserId(cfg)
+	statsLogger.Info("ToolVersion", slog.Any(LogFieldName_Type, "ToolVersion"), slog.Any("value", ToolVersion))
 
 	stats = NewTwitchStats()
 
