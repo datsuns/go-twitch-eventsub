@@ -74,17 +74,13 @@ func referUserClips(cfg *Config, userId string) string {
 	return retString
 }
 
-func referUserClipsByDate(cfg *Config, userId string, featured bool, date *time.Time) (string, *GetClipsApiResponce) {
-	maxN := 5
-	url := fmt.Sprintf("https://api.twitch.tv/helix/clips?broadcaster_id=%v&is_featured=%v&first=%v", userId, featured, maxN)
-	if date != nil {
-		url += fmt.Sprintf("&started_at=%v", date.UTC().Format(time.RFC3339))
-	}
+func issueGetClipRequest(cfg *Config, url string) (string, *GetClipsApiResponce) {
 	raw, err := issueEventSubRequest(cfg, "GET", url, nil)
 	if err != nil {
 		logger.Error("Eventsub Request", "ERROR", err.Error())
 		return "", nil
 	}
+
 	r := &GetClipsApiResponce{}
 	err = json.Unmarshal(raw, &r)
 	if err != nil {
@@ -97,4 +93,22 @@ func referUserClipsByDate(cfg *Config, userId string, featured bool, date *time.
 		ret += fmt.Sprintf("   再生回数[%v] / タイトル[%v] / URL[ %v ]\n", v.ViewCount, v.Title, v.Url)
 	}
 	return ret, r
+}
+
+func referUserClipsByDate(cfg *Config, userId string, featured bool, date *time.Time) (text string, ret *GetClipsApiResponce) {
+	maxN := 5
+	url := fmt.Sprintf("https://api.twitch.tv/helix/clips?broadcaster_id=%v&is_featured=%v&first=%v", userId, featured, maxN)
+	if date != nil {
+		url += fmt.Sprintf("&started_at=%v", date.UTC().Format(time.RFC3339))
+	}
+
+	text, ret = issueGetClipRequest(cfg, url)
+	if len(ret.Data) > 0 {
+		return text, ret
+	}
+	url = fmt.Sprintf("https://api.twitch.tv/helix/clips?broadcaster_id=%v&is_featured=%v&first=%v", userId, false, maxN)
+	if date != nil {
+		url += fmt.Sprintf("&started_at=%v", date.UTC().Format(time.RFC3339))
+	}
+	return issueGetClipRequest(cfg, url)
 }
