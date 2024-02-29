@@ -31,7 +31,7 @@ func loadConfigFrom(raw []byte) (*Config, error) {
 	ret := &Config{
 		NotifySoundFile:            notifySoundDefault,
 		DelayMinutesFromRaidToStop: 3,
-		NewClipWatchIntervalSecond: 60,
+		NewClipWatchIntervalSecond: 128,
 	}
 	if e := yaml.Unmarshal(raw, ret); e != nil {
 		return nil, e
