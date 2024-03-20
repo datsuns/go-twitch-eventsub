@@ -231,7 +231,7 @@ type EventFormatChannelChatNotification struct {
 	Message       struct {
 		Text      string `json:"text"`
 		Fragments []struct {
-			Type      string `json:"type"`
+			Type      string `json:"type"` // "text", "cheermote", "emote", "mention"
 			Text      string `json:"text"`
 			Cheermote struct {
 				Prefix string `json:"prefix"`
@@ -242,7 +242,7 @@ type EventFormatChannelChatNotification struct {
 				Id         string   `json:"id"`
 				EmoteSetId string   `json:"emote_set_id"`
 				OwnerId    string   `json:"owner_id"`
-				Format     []string `json:"format"`
+				Format     []string `json:"format"` // "animated", "static"
 			} `json:"emote"`
 			Mention struct {
 				UserId    string `json:"user_id"`

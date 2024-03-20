@@ -26,7 +26,7 @@ var (
 		"stream.online":                {"配信開始", "1", buildRequest, handleNotificationStreamOnline},
 		"stream.offline":               {"配信終了", "1", buildRequest, handleNotificationStreamOffline},
 		"channel.subscription.gift":    {"サブギフ", "1", buildRequest, handleNotificationChannelSubscriptionGift},       // channel:read:subscriptions
-		"channel.subscription.message": {"サブスク通知", "1", buildRequest, handleNotificationChannelSubscriptionMessage},  // channel:read:subscriptionsg",
+		"channel.subscription.message": {"再サブスク", "1", buildRequest, handleNotificationChannelSubscriptionMessage},   // channel:read:subscriptionsg",
 		"channel.chat.notification":    {"通知", "1", buildRequestWithUser, handleNotificationChannelChatNotification}, // user:read:chat
 		"channel.chat.message":         {"チャット", "1", buildRequestWithUser, handleNotificationChannelChatMessage},    // user:read:chat
 		"channel.raid":                 {"レイド開始", "1", buildRequestWithWithFromUser, handleNotificationRaidStarted},  // none
@@ -202,6 +202,7 @@ func handleNotificationStreamOffline(cfg *Config, r *Responce, raw []byte, s *Tw
 	fmt.Fprintf(log, s.String())
 }
 
+// サブギフした
 func handleNotificationChannelSubscriptionGift(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
 	v := &ResponceChannelSubscriptionGift{}
 	err := json.Unmarshal(raw, &v)
@@ -220,7 +221,8 @@ func handleNotificationChannelSubscriptionGift(_ *Config, r *Responce, raw []byt
 	s.SubGift(UserName(e.UserName), e.Total)
 }
 
-func handleNotificationChannelSubscriptionMessage(_ *Config, r *Responce, raw []byte, _ *TwitchStats) {
+// 継続サブスクをチャットでシェアした
+func handleNotificationChannelSubscriptionMessage(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
 	v := &ResponceChannelSubscriptionMessage{}
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
@@ -235,6 +237,7 @@ func handleNotificationChannelSubscriptionMessage(_ *Config, r *Responce, raw []
 		slog.Any("streak", e.StreakMonths),
 		slog.Any("cumlative", e.CumulativeMonths),
 	)
+	s.SubScribe(UserName(e.UserName), e.Tier)
 }
 
 func handleNotificationChannelPointsCustomRewardRedemptionAdd(_ *Config, r *Responce, raw []byte, s *TwitchStats) {
@@ -274,21 +277,20 @@ func handleNotificationChannelChatNotification(cfg *Config, r *Responce, raw []b
 	if err != nil {
 		logger.Error("Unmarshal", "error", err, "raw", string(raw))
 	}
+
 	e := &v.Payload.Event
 	switch e.NoticeType {
-	case "raid":
-		handleNotificationChannelChatNotificationRaid(cfg, r, e, s)
 	case "sub":
 	case "resub":
-		// TODO サブスク扱いにする
-		// 情報はこんな感じに来る
-		// "resub":{"cumulative_months":10,"duration_months":0,"streak_months":10,"sub_tier":"1000","is_prime":false,"is_gift":false,"gifter_is_anonymous":null,"gifter_user_id":null,"gifter_user_name":null,"gifter_user_login":null},
-		s.SubScribe(UserName(e.ChatterUserName), e.Resub.SubTier)
+		// サブスク継続をチャットで宣言したイベント
+		// channel.subscription.message も来るはずなのでそっちでハンドリングする
 	case "sub_gift":
 		// TODO サブギフも扱いにする
 	case "community_sub_gift":
 	case "gift_paid_upgrade":
 	case "prime_paid_upgrade":
+	case "raid":
+		handleNotificationChannelChatNotificationRaid(cfg, r, e, s)
 	case "unraid":
 	case "pay_it_forward":
 	case "announcement":
