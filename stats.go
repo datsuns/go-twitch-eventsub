@@ -49,6 +49,10 @@ type SubGiftStats struct {
 	History   map[UserName]BitsRecord
 }
 
+type SubGiftReceived struct {
+	History map[UserName]int
+}
+
 type SubScriptionEntry struct {
 	Tier string
 }
@@ -79,6 +83,7 @@ type TwitchStats struct {
 	CheerStats        CheerStats
 	SubScriptionStats SubScriptionStats
 	SubGiftStats      SubGiftStats
+	SubGiftReceived   SubGiftReceived
 	ViewersHistory    []ViewerStats
 	ChannelPoinsts    ChannelPointStats
 	RaidStats         RaidStats
@@ -107,6 +112,9 @@ func (t *TwitchStats) Clear() {
 		TotalBits: 0,
 		History:   map[UserName]BitsRecord{},
 	}
+	t.SubGiftReceived = SubGiftReceived{
+		History: map[UserName]int{},
+	}
 	t.ViewersHistory = []ViewerStats{}
 	t.ChannelPoinsts = ChannelPointStats{
 		TotalTimes: 0,
@@ -133,6 +141,10 @@ func (t *TwitchStats) String() string {
 	for name := range t.LoadSubscriptonHistory() {
 		subscResult += fmt.Sprintf("    - %v\n", name)
 	}
+	subGifResult := fmt.Sprintf("  サブギフ受け取った: %v人\n", len(t.LoadSubGifted()))
+	for name := range t.LoadSubGifted() {
+		subGifResult += fmt.Sprintf("    - %v\n", name)
+	}
 	cheerResult := fmt.Sprintf("  ビッツ: %v\n", t.LoadCheerTotal())
 	for name, bitsRecord := range t.LoadCheerHistory() {
 		cheerResult += fmt.Sprintf("    - %v (%v ビッツ)\n", name, bitsRecord.Bits)
@@ -148,11 +160,13 @@ func (t *TwitchStats) String() string {
 			"%v"+
 			"%v"+
 			"%v"+
+			"%v"+
 			"%v",
 		started, finished,
 		followResult,
 		chanepoResult,
 		subscResult,
+		subGifResult,
 		cheerResult,
 		raidResult,
 	)
@@ -222,6 +236,15 @@ func (t *TwitchStats) SubGift(user UserName, n int) {
 	}
 }
 
+func (t *TwitchStats) SubGifted(user UserName, tier string) {
+	if v, exists := t.SubGiftReceived.History[user]; exists {
+		v += 1
+		t.SubGiftReceived.History[user] = v
+	} else {
+		t.SubGiftReceived.History[user] = 1
+	}
+}
+
 func (t *TwitchStats) SubScribe(user UserName, tier string) {
 	if v, exists := t.SubScriptionStats.Entry[user]; exists {
 		v.Tier = tier
@@ -266,6 +289,10 @@ func (t *TwitchStats) LoadSubGiftTotal() int {
 
 func (t *TwitchStats) LoadSubGiftHistory() map[UserName]BitsRecord {
 	return t.SubGiftStats.History
+}
+
+func (t *TwitchStats) LoadSubGifted() map[UserName]int {
+	return t.SubGiftReceived.History
 }
 
 func (t *TwitchStats) LoadSubScribed() map[UserName]SubScriptionEntry {

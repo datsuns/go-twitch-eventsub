@@ -256,6 +256,16 @@ func handleNotificationChannelPointsCustomRewardRedemptionAdd(_ *Config, r *Resp
 	s.ChannelPoint(UserName(e.UserName), ChannelPointTitle(e.Reward.Title))
 }
 
+func handleNotificationChannelChatNotificationSubGifted(_ *Config, r *Responce, e *EventFormatChannelChatNotification, s *TwitchStats) {
+	statsLogger.Info("event(SubGiftReceived)",
+		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
+		slog.Any("category", "サブギフ受信"),
+		slog.Any("from", e.ChatterUserName),
+		slog.Any("to", e.SubGift.RecipientUserName),
+	)
+	s.SubGifted(UserName(e.SubGift.RecipientUserName), e.SubGift.Sub_Tier)
+}
+
 func handleNotificationChannelChatNotificationRaid(cfg *Config, r *Responce, e *EventFormatChannelChatNotification, s *TwitchStats) {
 	statsLogger.Info("event(Raid)",
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
@@ -285,7 +295,7 @@ func handleNotificationChannelChatNotification(cfg *Config, r *Responce, raw []b
 		// サブスク継続をチャットで宣言したイベント
 		// channel.subscription.message も来るはずなのでそっちでハンドリングする
 	case "sub_gift":
-		// TODO サブギフも扱いにする
+		handleNotificationChannelChatNotificationSubGifted(cfg, r, e, s)
 	case "community_sub_gift":
 	case "gift_paid_upgrade":
 	case "prime_paid_upgrade":
