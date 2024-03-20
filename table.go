@@ -214,7 +214,8 @@ func handleNotificationChannelSubscriptionGift(_ *Config, r *Responce, raw []byt
 		slog.Any(LogFieldName_Type, r.Payload.Subscription.Type),
 		slog.Any(LogFieldName_UserName, e.UserName),
 		slog.Any("tear", e.Tier),
-		slog.Any("total", e.CumulativeTotal),
+		slog.Any("num", e.Total),
+		slog.Any("cumulative", e.CumulativeTotal),
 		slog.Any("anonymous", e.IsAnonymous),
 	)
 
