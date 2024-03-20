@@ -145,9 +145,9 @@ func (t *TwitchStats) String() string {
 	for name, times := range t.LoadSubGiftHistory() {
 		subGifResult += fmt.Sprintf("    - %v (%v個)\n", name, times)
 	}
-	subGifRecvResult := fmt.Sprintf("  サブギフ受け取った: %v人\n", len(t.LoadSubGifted()))
+	subGifRecvResult := fmt.Sprintf("    >> サブギフ受け取った: %v人\n", len(t.LoadSubGifted()))
 	for name := range t.LoadSubGifted() {
-		subGifRecvResult += fmt.Sprintf("    - %v\n", name)
+		subGifRecvResult += fmt.Sprintf("      - %v\n", name)
 	}
 	cheerResult := fmt.Sprintf("  ビッツ: %v\n", t.LoadCheerTotal())
 	for name, bitsRecord := range t.LoadCheerHistory() {
